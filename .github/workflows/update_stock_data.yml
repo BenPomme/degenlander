@@ -2,7 +2,7 @@ name: Update Stock Data
 
 on:
   schedule:
-    - cron: '0 8 * * *'  # Runs every day at 08:00 UTC (adjust as needed)
+    - cron: '0 8 * * *'  # Runs every day at 08:00 UTC
   workflow_dispatch:    # Allows manual triggering
 
 permissions:
@@ -11,7 +11,6 @@ permissions:
 jobs:
   update-stock-data:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -27,7 +26,7 @@ jobs:
       - name: Run update_stock_data script
         run: python update_stock_data.py
 
-        - name: Commit changes if stocks.json updated
+      - name: Commit changes if stocks.json updated
         uses: EndBug/add-and-commit@v9
         with:
           token: ${{ secrets.PAT_TOKEN }}
