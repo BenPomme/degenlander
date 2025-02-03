@@ -193,7 +193,7 @@
   
   <script>
     // --- Static Stocks List ---
-    // Update this URL with the location of your hosted stocks.json file
+    // Use the correct URL for your hosted stocks.json file
     const STOCKS_JSON_URL = "https://benpomme.github.io/degenlander/stocks.json";
     
     async function updateStockList() {
@@ -679,6 +679,9 @@
     restartButton.addEventListener("click", () => {
       startGame();
     });
+    
+    // --- Wire up the Start Game Button ---
+    startGameButton.addEventListener("click", startGame);
     
     // --- Start Up ---
     updateStockList();
