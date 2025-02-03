@@ -30,7 +30,7 @@ jobs:
         - name: Commit changes if stocks.json updated
         uses: EndBug/add-and-commit@v9
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN }}
           author_name: github-actions
           author_email: github-actions@github.com
           message: "Update stocks.json [skip ci]"
