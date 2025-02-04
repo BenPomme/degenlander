@@ -174,10 +174,7 @@
   
   <!-- Game Logic Script (non-module) -->
   <script>
-    // Global variable to store the close price
-    let closePrice = 0;
-
-    // Helper: Parse query parameters
+    // Use a default stock symbol if none is provided
     function getQueryParams() {
       const params = {};
       const queryString = window.location.search.substring(1);
@@ -189,17 +186,22 @@
     }
     const queryParams = getQueryParams();
     const playerName = queryParams.playerName || "Anonymous";
-    const stockSymbol = queryParams.stockSymbol || "";
-    
-    // Fetch terrain data and now also extract the close price (last price)
+    // Default to "AAPL" if no stock is specified
+    const stockSymbol = queryParams.stockSymbol || "AAPL";
+
+    // Fetch terrain data from your GitHub repository
     async function fetchTerrainDataStatic(stockSymbol) {
       const url = `https://benpomme.github.io/degenlander/stock_${stockSymbol}.json`;
       try {
         const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
         if (!Array.isArray(data) || data.length === 0) {
-          throw new Error("Invalid or empty stock data");
+          throw new Error("Invalid or empty terrain data");
         }
+        // Map using the "4. close" property from the JSON data
         const prices = data.map(item => parseFloat(item["4. close"]));
         const displayCount = prices.length;
         const minP = Math.min(...prices);
@@ -218,11 +220,11 @@
           minP, 
           maxP, 
           dates: data.map((d, i) => "Day " + (i + 1)),
-          closePrice: prices[prices.length - 1]  // new: return close price
+          closePrice: prices[prices.length - 1]
         };
       } catch (err) {
-        console.error("Error fetching static stock data:", err);
-        info.textContent = "Error fetching stock chart data.";
+        console.error("Error fetching terrain data:", err);
+        info.textContent = "Error fetching terrain data.";
         return { points: [], minP: 0, maxP: 0, dates: [], closePrice: 0 };
       }
     }
@@ -436,7 +438,6 @@
         const p2 = terrainPoints[i + 1];
         if (lander.x >= p1.x && lander.x <= p2.x) {
           const terrainY = p1.y + ((p2.y - p1.y) * (lander.x - p1.x)) / (p2.x - p1.x);
-          // landingPrice is interpolated from the terrain points:
           const terrainPrice = p1.price + ((p2.price - p1.price) * (lander.x - p1.x)) / (p2.x - p1.x);
           if (lander.y >= terrainY) {
             const vspeed = Math.abs(lander.vy);
@@ -444,10 +445,10 @@
             const angleDiff = Math.abs(lander.angle % 360);
             if (vspeed < 0.5 && hspeed < 0.5 && angleDiff < 15) {
               lander.isLanded = true;
-              // New score calculation: (closePrice - landingPrice) x fuel left
-              lander.score = Math.round((closePrice - terrainPrice) * lander.fuel);
+              // New score calculation: (closePrice - landingPrice) * fuel left
+              lander.score = Math.round((result.closePrice - terrainPrice) * lander.fuel);
               const phrase = memePhrases[Math.floor(Math.random() * memePhrases.length)];
-              info.textContent = `${phrase} Landed on $${terrainPrice.toFixed(2)} (Close: $${closePrice.toFixed(2)})! Score: $${lander.score}`;
+              info.textContent = `${phrase} Landed on $${terrainPrice.toFixed(2)} (Close: $${result.closePrice.toFixed(2)})! Score: $${lander.score}`;
               landingSound.play();
               saveLeaderboard(playerName, stockSymbol, lander.score);
               endGame();
@@ -555,13 +556,12 @@
       initStars();
       initGame();
     });
+    let result; // to store fetched terrain data globally
     async function initGame() {
       resizeCanvas();
       initStars();
-      const result = await fetchTerrainDataStatic(stockSymbol);
+      result = await fetchTerrainDataStatic(stockSymbol);
       terrainPoints = result.points;
-      // Save the close price for score calculation
-      closePrice = result.closePrice;
       if (!terrainPoints.length) {
         info.textContent = "No terrain generated. Game cannot start.";
         return;
