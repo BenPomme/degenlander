@@ -4,18 +4,17 @@
   <meta charset="UTF-8">
   <title>DEGEN LANDER - Game</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Import the retro font for degen aesthetics -->
+  <!-- Import retro font for degen aesthetics -->
   <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
   <style>
     /* New degen graphical improvements */
     body { 
       margin: 0;
       padding: 0;
-      /* Changed gradient and added neon flicker animation */
+      /* Neon-inspired gradient with flicker animation */
       background: linear-gradient(45deg, #141414, #222);
       animation: neonFlicker 5s infinite;
       color: #fff;
-      /* Use the retro font instead of Segoe UI */
       font-family: 'Press Start 2P', cursive;
       text-align: center;
     }
@@ -26,7 +25,6 @@
     #gameContainer { position: relative; }
     h1 { 
       font-size: 2rem;
-      /* Neon glow effect */
       text-shadow: 0 0 5px #00FFFF, 0 0 10px #00FFFF, 0 0 20px #FF00FF, 0 0 30px #FF00FF;
       animation: glow 1.5s ease-in-out infinite alternate;
       margin: 20px 0;
@@ -172,7 +170,7 @@
     window.saveLeaderboard = saveLeaderboard;
   </script>
   
-  <!-- Game Logic Script (functionality intact) -->
+  <!-- Game Logic Script (terrain generation and game functionality unchanged) -->
   <script>
     // Global variable to store the close price
     let closePrice = 0;
@@ -189,11 +187,14 @@
     }
     const queryParams = getQueryParams();
     const playerName = queryParams.playerName || "Anonymous";
-    const stockSymbol = queryParams.stockSymbol || "";
+    // IMPORTANT: Default to "AAPL" if no stock symbol is provided.
+    const stockSymbol = queryParams.stockSymbol || "AAPL";
     
-    // Fetch terrain data (unchanged function)
+    // Fetch terrain data (same as your working version)
     async function fetchTerrainDataStatic(stockSymbol) {
       const url = `https://benpomme.github.io/degenlander/stock_${stockSymbol}.json`;
+      // Uncomment the next line for debugging the URL:
+      // console.log("Fetching terrain data from:", url);
       try {
         const response = await fetch(url);
         const data = await response.json();
@@ -555,7 +556,8 @@
       initStars();
       initGame();
     });
-    let result; // to store fetched terrain data globally
+    
+    let result; // Global to store fetched terrain data
     async function initGame() {
       resizeCanvas();
       initStars();
