@@ -31,12 +31,7 @@ stocks = [
 main_stock_list = []
 
 def compute_terrain(stock_data, canvas_width=800, canvas_height=600):
-    """
-    Given a list of dictionaries with key "4. close" (as strings),
-    compute terrain data matching the format expected by the game.
-    Returns a dictionary with keys: points, minP, maxP, dates, closePrice.
-    """
-    # Extract closing prices from the provided list
+    # Extract closing prices
     prices = [float(item["4. close"]) for item in stock_data if "4. close" in item]
     if not prices:
         return None
@@ -44,7 +39,6 @@ def compute_terrain(stock_data, canvas_width=800, canvas_height=600):
     min_price = min(prices)
     max_price = max(prices)
     price_range = max_price - min_price
-    # Compute horizontal step size
     step = canvas_width / (display_count - 1)
     points = []
     for i, price in enumerate(prices):
@@ -77,7 +71,7 @@ for stock in stocks:
         continue
 
     time_series = data["Time Series (Daily)"]
-    dates = sorted(time_series.keys())  # Sorted in ascending order
+    dates = sorted(time_series.keys())
     if not dates:
         print(f"No dates found for {ticker}.")
         continue
@@ -96,7 +90,6 @@ for stock in stocks:
 
     # For terrain data: use the last 30 days (or all available if fewer)
     last_30_dates = dates[-30:]
-    # Build a list of dictionaries containing the "4. close" for each date
     terrain_raw = []
     for d in last_30_dates:
         try:
@@ -117,7 +110,7 @@ for stock in stocks:
         except Exception as e:
             print(f"Error writing file {terrain_filename}: {e}")
 
-    # Sleep to respect API rate limits
+    # Sleep to respect API rate limits (Alpha Vantage allows 5 calls per minute)
     time.sleep(15)
 
 try:

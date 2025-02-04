@@ -27,7 +27,7 @@
   </div>
 
   <script>
-    // Embedded stock data (populate the dropdown)
+    // Embedded stock data: populate the dropdown.
     const stocks = [
       {"ticker": "AAPL", "name": "Apple Inc."},
       {"ticker": "MSFT", "name": "Microsoft Corporation"},
@@ -60,7 +60,7 @@
       });
     });
 
-    // When the form is submitted, open game.html with the parameters.
+    // On form submission, pass parameters to game.html.
     document.getElementById("startGameForm").addEventListener("submit", function(e) {
       e.preventDefault();
       const playerName = document.getElementById("playerName").value;
