@@ -1,689 +1,119 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>DEGEN LANDER</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <title>DEGEN LANDER - Main Menu</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* Global Styles */
+    /* Main Menu Styles */
     body {
-      margin: 0;
+      margin: 0; 
       padding: 0;
-      background: #000;
+      background: #000; 
       color: #fff;
-      font-family: sans-serif;
+      font-family: sans-serif; 
       text-align: center;
     }
-    #gameContainer {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      position: relative;
-    }
-    /* Stock List Table */
-    #stockListContainer {
-      margin: 20px auto;
-      max-width: 800px;
-    }
-    #stockListTable {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    #stockListTable th,
-    #stockListTable td {
-      border: 1px solid #555;
-      padding: 8px;
-    }
-    #stockListTable th {
-      background: #222;
-    }
-    /* Input Form */
-    #stockForm {
-      margin-bottom: 10px;
-    }
-    #playerName,
-    #stockSymbol {
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
+    #mainContainer { padding: 20px; }
+    input {
+      padding: 8px; margin: 5px;
+      border-radius: 6px; border: 1px solid #ccc;
       font-size: 16px;
-      margin: 5px;
     }
-    #startGameButton,
-    #tipButton,
-    .shareButtons button,
-    #restartButton {
-      padding: 8px 16px;
+    button {
+      padding: 8px 16px; 
       background: #333;
-      color: #fff;
+      color: #fff; 
       border: none;
-      border-radius: 6px;
+      border-radius: 6px; 
       cursor: pointer;
-      font-size: 16px;
-      margin: 5px;
-      transition: background 0.3s;
+      margin: 5px; 
+      transition: background 0.3s, transform 0.3s;
     }
-    #startGameButton:hover,
-    #tipButton:hover,
-    .shareButtons button:hover {
-      background: #555;
-    }
-    #restartButton {
-      background: #e53935;
-    }
-    #restartButton:hover {
-      background: #d32f2f;
-    }
-    /* Canvas & Overlay */
-    canvas {
-      background: #111;
-      border: 2px solid #ccc;
-      display: block;
-    }
-    #chartOverlay {
-      background: transparent;
-      border: none;
-      position: absolute;
-      top: 0;
-      left: 0;
-      pointer-events: none;
-    }
-    #info {
-      margin-top: 10px;
-      color: #0f0;
-      font-weight: bold;
-    }
-    .hidden {
-      display: none;
-    }
-    /* HUD */
-    #hud {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      color: #0f0;
-      text-align: left;
-      font-family: monospace;
-      white-space: pre;
-    }
-    /* Comic Bubble */
-    .comicBubble {
-      position: absolute;
-      background: #fff;
-      color: #000;
-      padding: 10px;
-      border-radius: 10px;
-      border: 3px solid #000;
-      font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
-      font-size: 24px;
-      transform: translate(-50%, -50%);
-      box-shadow: 5px 5px 0 #000;
-      z-index: 999;
-    }
-    /* Leaderboard */
-    #leaderboardContainer {
-      margin: 20px auto;
-      max-width: 600px;
-    }
-    #leaderboardTable {
-      width: 100%;
+    button:hover { background: #555; transform: scale(1.05); }
+    table {
+      width: 90%; margin: auto;
       border-collapse: collapse;
     }
-    #leaderboardTable th,
-    #leaderboardTable td {
-      border: 1px solid #555;
-      padding: 8px;
+    th, td {
+      border: 1px solid #555; padding: 8px;
     }
-    #leaderboardTable th {
-      background: #222;
+    th { background: #222; }
+    #topBar {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 20px;
     }
   </style>
 </head>
 <body>
-  <div id="gameContainer">
+  <div id="mainContainer">
     <h1>DEGEN LANDER</h1>
-    
-    <!-- Stock List Section -->
+    <!-- Top bar with name input and Leaderboard button -->
+    <div id="topBar">
+      <div id="nameInputContainer">
+        <label for="playerName">Enter your name: </label>
+        <input type="text" id="playerName" placeholder="Your name">
+      </div>
+      <button id="leaderboardButton">Leaderboard</button>
+    </div>
+    <h2>Stock List</h2>
     <div id="stockListContainer"></div>
-    
-    <!-- Input Form -->
-    <form id="stockForm">
-      <input type="text" id="playerName" placeholder="Enter your name" />
-      <input type="text" id="stockSymbol" placeholder="Enter Stock Symbol (e.g. AAPL)" />
-      <button type="button" id="startGameButton">Start Game</button>
-    </form>
-    
-    <!-- Game Elements -->
-    <canvas id="gameCanvas" class="hidden"></canvas>
-    <canvas id="chartOverlay" class="hidden"></canvas>
-    <div id="hud" class="hidden"></div>
-    <div id="info"></div>
-    
-    <!-- Tip & Share -->
-    <div id="tipContainer" class="hidden">
-      <p>Enjoying the game? Feel free to leave a tip!</p>
-      <button id="tipButton">Tip me Diamond Hand</button>
-    </div>
-    <div class="shareButtons hidden" id="shareButtons">
-      <p>Share Your Landing:</p>
-      <button id="shareReddit">Share on Reddit</button>
-      <button id="shareX">Share on X (Twitter)</button>
-    </div>
-    
-    <!-- Restart Button -->
-    <button id="restartButton" class="hidden">Restart Game</button>
   </div>
-  
-  <!-- Leaderboard Section -->
-  <div id="leaderboardContainer" class="hidden">
-    <h2>Leaderboard</h2>
-    <table id="leaderboardTable">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Stock</th>
-          <th>Score ($)</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-  
   <script>
+<<<<<<< HEAD
     // --- Static Stocks List ---
     // Use the correct URL for your hosted stocks.json file
+=======
+>>>>>>> e1fb2d3 (Update update_stock_data.yml and related JSON files)
     const STOCKS_JSON_URL = "https://benpomme.github.io/degenlander/stocks.json";
     
     async function updateStockList() {
-      const container = document.getElementById('stockListContainer');
+      const container = document.getElementById("stockListContainer");
       try {
         const response = await fetch(STOCKS_JSON_URL);
         const stockData = await response.json();
-        let html = '<h2>Stock List</h2>';
-        html += '<table id="stockListTable"><thead><tr><th>Ticker</th><th>Name</th><th>Last Close ($)</th></tr></thead><tbody>';
+        let html = "<table><thead><tr><th>Ticker</th><th>Name</th><th>Last Close ($)</th><th>Action</th></tr></thead><tbody>";
         stockData.forEach(stock => {
           html += `<tr>
             <td>${stock.ticker}</td>
             <td>${stock.name}</td>
             <td>${stock.price !== null ? stock.price.toFixed(2) : 'N/A'}</td>
+            <td><button onclick="landStock('${stock.ticker}')">Land This Stock</button></td>
           </tr>`;
         });
-        html += '</tbody></table>';
+        html += "</tbody></table>";
         container.innerHTML = html;
       } catch (error) {
-        console.error("Error fetching static stock data:", error);
+        console.error("Error fetching stock data:", error);
         container.innerHTML = "<p>Error loading stock list.</p>";
       }
     }
     
-    // --- Leaderboard ---
-    let leaderboard = [];
-    function addToLeaderboard(playerName, stockSymbol, score) {
-      leaderboard.push({ playerName, stockSymbol, score });
-      updateLeaderboardTable();
-    }
-    function updateLeaderboardTable() {
-      const leaderboardContainer = document.getElementById('leaderboardContainer');
-      leaderboardContainer.classList.remove("hidden");
-      const tbody = document.querySelector("#leaderboardTable tbody");
-      tbody.innerHTML = "";
-      leaderboard.forEach(entry => {
-        const tr = `<tr>
-          <td>${entry.playerName}</td>
-          <td>${entry.stockSymbol}</td>
-          <td>$${entry.score}</td>
-        </tr>`;
-        tbody.innerHTML += tr;
-      });
-    }
-    
-    // --- Game Variables & States ---
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-    const overlayCanvas = document.getElementById("chartOverlay");
-    const overlayCtx = overlayCanvas.getContext("2d");
-    
-    const startGameButton = document.getElementById("startGameButton");
-    const stockSymbolInput = document.getElementById("stockSymbol");
-    const playerNameInput = document.getElementById("playerName");
-    const info = document.getElementById("info");
-    const hud = document.getElementById("hud");
-    const tipContainer = document.getElementById("tipContainer");
-    const tipButton = document.getElementById("tipButton");
-    const shareButtons = document.getElementById("shareButtons");
-    const shareRedditButton = document.getElementById("shareReddit");
-    const shareXButton = document.getElementById("shareX");
-    const restartButton = document.getElementById("restartButton");
-    
-    let terrainPoints = [];
-    let minPrice = 0;
-    let maxPrice = 0;
-    let relevantDates = [];
-    
-    let stars = [];
-    let particles = [];
-    let powerUp = null;
-    
-    const gravity = 0.003;
-    const thrustPower = 0.04;
-    const rotationSpeed = 3;
-    let keysPressed = {};
-    let animationFrameId;
-    
-    let lander = { x: 400, y: 50, vx: 0, vy: 0, angle: 0, fuel: 100, isCrashed: false, isLanded: false, score: 0 };
-    
-    const memePhrases = [
-      "TO THE MOON, APES!",
-      "GME YOLO DIAMOND HANDS!",
-      "WE LIKE THE STOCK!",
-      "STONKS ONLY GO UP!",
-      "DIAMOND HANDS FOREVER!",
-      "SEND IT TO VALHALLA!",
-      "HODL TILL YOUR HANDS TURN TO DIAMONDS!",
-      "LAND IT, BITCH!",
-      "MOON OR BUST!",
-      "CRASHING IS FOR NOOBS!",
-      "LIFT OFF, BRO!",
-      "FUEL IN, STARS OUT!",
-      "FINALLY, A REAL LANDING!",
-      "STOCKS AND ROCKS, BABY!",
-      "LET'S DEFY GRAVITY!",
-      "HODL MY BEER, I'M LANDING!",
-      "BUY THE DIP, LAND THE SHIP!",
-      "WHEN LAMBO? NOW!",
-      "CRYPTO TO THE MOON, FINANCE STYLE!",
-      "WEN MOON? NOW, BITCH!"
-    ];
-    
-    // --- Starfield ---
-    function initStars() {
-      stars = [];
-      for (let i = 0; i < 100; i++) {
-        stars.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
-          size: Math.random() * 2 + 1,
-          alpha: Math.random() * 0.5 + 0.5,
-          twinkle: Math.random() * 0.02 - 0.01
-        });
-      }
-    }
-    function drawStars() {
-      for (let star of stars) {
-        star.alpha += star.twinkle;
-        if (star.alpha > 1) { star.alpha = 1; star.twinkle = -Math.abs(star.twinkle); }
-        if (star.alpha < 0.3) { star.alpha = 0.3; star.twinkle = Math.abs(star.twinkle); }
-        ctx.fillStyle = `rgba(255,255,255,${star.alpha})`;
-        ctx.beginPath();
-        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-    
-    // --- Terrain ---
-    // If API call fails, generate a random terrain
-    function generateFallbackTerrain() {
-      let points = [];
-      const width = canvas.width;
-      const height = canvas.height;
-      const numPoints = 30;
-      for (let i = 0; i < numPoints; i++) {
-        let x = i * (width / (numPoints - 1));
-        let y = height - (Math.random() * (height * 0.5) + height * 0.25);
-        points.push({ x, y, price: 100 });
-      }
-      return points;
-    }
-    
-    // Fetch terrain data from Alpha Vantage; if error, use fallback
-    async function fetchTerrainData(stockSymbol) {
-      try {
-        const apiKey = "KGONF7JN3HYIGUWO";
-        const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${stockSymbol}&apikey=${apiKey}`;
-        info.textContent = "Fetching stock data...";
-        const response = await fetch(url);
-        const data = await response.json();
-        if (!data["Time Series (Daily)"]) throw new Error("No data");
-        const timeSeries = data["Time Series (Daily)"];
-        const dates = Object.keys(timeSeries).sort();
-        const closePrices = dates.map(d => parseFloat(timeSeries[d]["4. close"]));
-        const displayCount = Math.min(30, closePrices.length);
-        relevantDates = dates.slice(-displayCount);
-        const relevantPrices = closePrices.slice(-displayCount);
-        minPrice = Math.min(...relevantPrices);
-        maxPrice = Math.max(...relevantPrices);
-        const priceRange = maxPrice - minPrice;
-        const step = canvas.width / (relevantPrices.length - 1);
-        let points = [];
-        for (let i = 0; i < relevantPrices.length; i++) {
-          let x = i * step;
-          let normalized = (relevantPrices[i] - minPrice) / (priceRange || 1);
-          let y = canvas.height - normalized * (canvas.height * 0.5);
-          points.push({ x, y, price: relevantPrices[i] });
-        }
-        return points;
-      } catch (err) {
-        console.error("Error fetching terrain data, using fallback.", err);
-        return generateFallbackTerrain();
-      }
-    }
-    
-    // --- Drawing ---
-    function drawTerrain() {
-      if (!terrainPoints.length) return;
-      ctx.beginPath();
-      ctx.moveTo(terrainPoints[0].x, terrainPoints[0].y);
-      for (let i = 1; i < terrainPoints.length; i++) {
-        ctx.lineTo(terrainPoints[i].x, terrainPoints[i].y);
-      }
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = "#0f0";
-      ctx.stroke();
-      ctx.lineTo(canvas.width, canvas.height);
-      ctx.lineTo(0, canvas.height);
-      ctx.closePath();
-      ctx.fillStyle = "#030";
-      ctx.fill();
-    }
-    
-    function drawChartAxes() {
-      overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-      if (!terrainPoints.length) return;
-      overlayCtx.strokeStyle = "#888";
-      overlayCtx.lineWidth = 1;
-      overlayCtx.beginPath();
-      overlayCtx.moveTo(50, 0);
-      overlayCtx.lineTo(50, overlayCanvas.height);
-      overlayCtx.moveTo(0, overlayCanvas.height - 50);
-      overlayCtx.lineTo(overlayCanvas.width, overlayCanvas.height - 50);
-      overlayCtx.stroke();
-      overlayCtx.fillStyle = "#ccc";
-      overlayCtx.font = "12px monospace";
-      overlayCtx.textAlign = "right";
-      overlayCtx.fillText(`Max: ${maxPrice.toFixed(2)}`, 45, 20);
-      overlayCtx.fillText(`Min: ${minPrice.toFixed(2)}`, 45, overlayCanvas.height - 55);
-      overlayCtx.textAlign = "center";
-      const tickCount = 4;
-      const step = Math.floor(relevantDates.length / tickCount);
-      for (let i = 0; i < relevantDates.length; i += step) {
-        const label = relevantDates[i];
-        const dateX = terrainPoints[i].x;
-        overlayCtx.beginPath();
-        overlayCtx.moveTo(dateX + 50, overlayCanvas.height - 50);
-        overlayCtx.lineTo(dateX + 50, overlayCanvas.height - 45);
-        overlayCtx.stroke();
-        overlayCtx.save();
-        overlayCtx.translate(dateX + 50, overlayCanvas.height - 40);
-        overlayCtx.rotate(-Math.PI / 4);
-        overlayCtx.fillText(label, 0, 0);
-        overlayCtx.restore();
-      }
-    }
-    
-    function drawPowerUp() {
-      if (powerUp && !powerUp.collected) {
-        ctx.fillStyle = "gold";
-        ctx.beginPath();
-        ctx.arc(powerUp.x, powerUp.y, 10, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = "#000";
-        ctx.stroke();
-      }
-    }
-    
-    function drawLander() {
-      ctx.save();
-      ctx.translate(lander.x, lander.y);
-      ctx.rotate((lander.angle * Math.PI) / 180);
-      ctx.beginPath();
-      ctx.moveTo(-10, 10);
-      ctx.lineTo(10, 10);
-      ctx.lineTo(0, -10);
-      ctx.closePath();
-      ctx.fillStyle = "#ff0";
-      ctx.fill();
-      if (keysPressed["ArrowUp"] && lander.fuel > 0 && !lander.isCrashed && !lander.isLanded) {
-        ctx.beginPath();
-        ctx.moveTo(-5, 10);
-        ctx.lineTo(5, 10);
-        ctx.lineTo(0, 20);
-        ctx.closePath();
-        ctx.fillStyle = "orange";
-        ctx.fill();
-      }
-      ctx.restore();
-    }
-    
-    function drawParticles() {
-      for (let i = particles.length - 1; i >= 0; i--) {
-        let p = particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life -= 1;
-        p.alpha = p.life / 30;
-        ctx.fillStyle = `rgba(255,165,0,${p.alpha})`;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
-        ctx.fill();
-        if (p.life <= 0) {
-          particles.splice(i, 1);
-        }
-      }
-    }
-    
-    function drawHUD() {
-      hud.textContent = `Fuel: ${lander.fuel.toFixed(1)}\nScore: $${lander.score}`;
-    }
-    
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawStars();
-      drawTerrain();
-      drawPowerUp();
-      drawParticles();
-      drawLander();
-      drawHUD();
-    }
-    
-    // --- Update Game State ---
-    function updateLander() {
-      if (lander.isCrashed || lander.isLanded) return;
-      if (keysPressed["ArrowLeft"]) { lander.angle -= rotationSpeed; }
-      if (keysPressed["ArrowRight"]) { lander.angle += rotationSpeed; }
-      if (keysPressed["ArrowUp"] && lander.fuel > 0) {
-        const rad = (lander.angle * Math.PI) / 180;
-        const ax = Math.sin(rad) * thrustPower;
-        const ay = -Math.cos(rad) * thrustPower;
-        lander.vx += ax;
-        lander.vy += ay;
-        lander.fuel = Math.max(lander.fuel - 0.1, 0);
-        particles.push({
-          x: lander.x - Math.sin(rad) * 10,
-          y: lander.y + Math.cos(rad) * 10,
-          vx: -Math.sin(rad) * (Math.random() * 1 + 0.5),
-          vy: Math.cos(rad) * (Math.random() * 1 + 0.5),
-          alpha: 1,
-          life: 30
-        });
-        if (Math.random() < 0.005) {
-          showComicBubble(memePhrases[Math.floor(Math.random() * memePhrases.length)], lander.x + 50, lander.y);
-        }
-      }
-      lander.vy += gravity;
-      lander.x += lander.vx;
-      lander.y += lander.vy;
-      if (lander.x < 0) { lander.x = 0; lander.vx = 0; }
-      else if (lander.x > canvas.width) { lander.x = canvas.width; lander.vx = 0; }
-      if (lander.y < 0) { lander.y = 0; lander.vy = 0; }
-      if (lander.y > canvas.height) {
-        lander.y = canvas.height;
-        lander.isCrashed = true;
-        info.textContent = "You crashed into the bottom!";
-        crashSound.play();
-        restartButton.classList.remove("hidden");
+    function landStock(stockTicker) {
+      const playerName = document.getElementById("playerName").value.trim();
+      if (!playerName) {
+        alert("Please enter your name.");
         return;
       }
-      for (let i = 0; i < terrainPoints.length - 1; i++) {
-        const p1 = terrainPoints[i];
-        const p2 = terrainPoints[i + 1];
-        if (lander.x >= p1.x && lander.x <= p2.x) {
-          const terrainY = p1.y + ((p2.y - p1.y) * (lander.x - p1.x)) / (p2.x - p1.x);
-          const terrainPrice = p1.price + ((p2.price - p1.price) * (lander.x - p1.x)) / (p2.x - p1.x);
-          if (lander.y >= terrainY) {
-            const vspeed = Math.abs(lander.vy);
-            const hspeed = Math.abs(lander.vx);
-            const angleDiff = Math.abs(lander.angle % 360);
-            if (vspeed < 0.5 && hspeed < 0.5 && angleDiff < 15) {
-              lander.isLanded = true;
-              lander.score = Math.round(lander.fuel * terrainPrice);
-              const phrase = memePhrases[Math.floor(Math.random() * memePhrases.length)];
-              info.textContent = `${phrase} Landed on $${terrainPrice.toFixed(2)}! Score: $${lander.score}`;
-              shareButtons.classList.remove("hidden");
-              landingSound.play();
-              restartButton.classList.remove("hidden");
-              const playerName = playerNameInput.value.trim() || "Anonymous";
-              addToLeaderboard(playerName, stockSymbolInput.value.trim().toUpperCase(), lander.score);
-              break;
-            } else {
-              lander.isCrashed = true;
-              info.textContent = "You crashed on the mountain!";
-              crashSound.play();
-              restartButton.classList.remove("hidden");
-              break;
-            }
-          }
-        }
-      }
-      if (powerUp && !powerUp.collected) {
-        const dx = lander.x - powerUp.x;
-        const dy = lander.y - powerUp.y;
-        if (Math.sqrt(dx * dx + dy * dy) < 15) {
-          powerUp.collected = true;
-          lander.fuel = Math.min(lander.fuel + 20, 100);
-          info.textContent = "Power-up collected! Extra fuel!";
-        }
-      }
+      // Open game.html in a new window, passing playerName and stockSymbol as query parameters
+      const url = `game.html?playerName=${encodeURIComponent(playerName)}&stockSymbol=${encodeURIComponent(stockTicker)}`;
+      window.open(url, "_blank");
     }
     
-    function gameLoop() {
-      updateLander();
-      draw();
-      if (!lander.isCrashed && !lander.isLanded) {
-        animationFrameId = requestAnimationFrame(gameLoop);
-      }
-    }
-    
-    // --- Comic Bubble ---
-    let bubbleTimeout;
-    function showComicBubble(text, x, y) {
-      const bubble = document.createElement("div");
-      bubble.className = "comicBubble";
-      bubble.textContent = text;
-      bubble.style.left = x + "px";
-      bubble.style.top = y + "px";
-      document.body.appendChild(bubble);
-      bubbleTimeout = setTimeout(() => { bubble.remove(); }, 2000);
-    }
-    
-    // --- Sound Effects ---
-    const thrustSound = new Audio("https://www.myinstants.com/media/sounds/rocket-thrust.mp3");
-    const landingSound = new Audio("https://www.myinstants.com/media/sounds/success-fanfare-trumpets.mp3");
-    const crashSound = new Audio("https://www.myinstants.com/media/sounds/failure-sound-effect.mp3");
-    
-    // --- Responsive Canvas ---
-    function resizeCanvas() {
-      canvas.width = window.innerWidth * 0.8;
-      canvas.height = window.innerHeight * 0.8;
-      overlayCanvas.width = canvas.width;
-      overlayCanvas.height = canvas.height;
-      drawChartAxes();
-    }
-    window.addEventListener("resize", resizeCanvas);
-    
-    // --- Game Initialization ---
-    async function startGame() {
-      cancelAnimationFrame(animationFrameId);
-      lander = { x: 400, y: 50, vx: 0, vy: 0, angle: 0, fuel: 100, isCrashed: false, isLanded: false, score: 0 };
-      keysPressed = {};
-      particles = [];
-      powerUp = null;
-      info.textContent = "";
-      shareButtons.classList.add("hidden");
-      restartButton.classList.add("hidden");
-      
-      resizeCanvas();
-      initStars();
-      
-      const stockSymbol = stockSymbolInput.value.trim().toUpperCase();
-      if (!stockSymbol) {
-        alert("Enter a stock symbol.");
-        return;
-      }
-      info.textContent = "Fetching stock data...";
-      terrainPoints = await fetchTerrainData(stockSymbol);
-      if (!terrainPoints.length) {
-        info.textContent = "No terrain generated. Game cannot start.";
-        return;
-      }
-      info.textContent = "";
-      // Spawn a power-up on the terrain
-      if (terrainPoints.length >= 2) {
-        const index = Math.floor(Math.random() * (terrainPoints.length - 1));
-        const p1 = terrainPoints[index];
-        const p2 = terrainPoints[index + 1];
-        const x = (p1.x + p2.x) / 2;
-        const y = (p1.y + p2.y) / 2 - 30;
-        powerUp = { x, y, collected: false };
-      }
-      canvas.classList.remove("hidden");
-      overlayCanvas.classList.remove("hidden");
-      hud.classList.remove("hidden");
-      tipContainer.classList.remove("hidden");
-      
-      drawChartAxes();
-      gameLoop();
-    }
-    
-    // --- Keyboard & Sound Controls ---
-    function handleKeyDown(e) {
-      if (e.key === "ArrowUp" && !keysPressed["ArrowUp"]) {
-        thrustSound.loop = true;
-        thrustSound.play();
-      }
-      keysPressed[e.key] = true;
-    }
-    function handleKeyUp(e) {
-      keysPressed[e.key] = false;
-      if (e.key === "ArrowUp") {
-        thrustSound.pause();
-        thrustSound.currentTime = 0;
-      }
-    }
-    document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("keyup", handleKeyUp);
-    
-    // --- Tip & Social Share ---
-    tipButton.addEventListener("click", () => {
-      alert("Thank you for your generosity! You can tip via PayPal: your-paypal-link");
-    });
-    shareRedditButton.addEventListener("click", () => {
-      const message = encodeURIComponent(`I just landed on the ${stockSymbolInput.value.toUpperCase()} chart with a score of $${lander.score}! Check out this Moon Lander game!`);
-      window.open(`https://www.reddit.com/submit?title=${message}&url=https://example.com/moon-lander`, "_blank");
-    });
-    shareXButton.addEventListener("click", () => {
-      const message = encodeURIComponent(`I just landed on the ${stockSymbolInput.value.toUpperCase()} chart with a score of $${lander.score}! #MoonLander`);
-      window.open(`https://twitter.com/intent/tweet?text=${message}`, "_blank");
-    });
-    restartButton.addEventListener("click", () => {
-      startGame();
+    document.getElementById("leaderboardButton").addEventListener("click", () => {
+      window.location.href = "leaderboard.html";
     });
     
+<<<<<<< HEAD
     // --- Wire up the Start Game Button ---
     startGameButton.addEventListener("click", startGame);
     
     // --- Start Up ---
+=======
+>>>>>>> e1fb2d3 (Update update_stock_data.yml and related JSON files)
     updateStockList();
   </script>
 </body>

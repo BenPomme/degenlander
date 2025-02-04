@@ -26,11 +26,11 @@ jobs:
       - name: Run update_stock_data script
         run: python update_stock_data.py
 
-      - name: Commit changes if stocks.json updated
+      - name: Commit updated JSON files
         uses: EndBug/add-and-commit@v9
         with:
           token: ${{ secrets.PAT_TOKEN }}
           author_name: github-actions
           author_email: github-actions@github.com
-          message: "Update stocks.json [skip ci]"
-          add: "stocks.json"
+          message: "Update stock data JSON files [skip ci]"
+          add: "**/*.json"

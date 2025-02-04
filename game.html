@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DEGEN LANDER - Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* Game Styles */
+    body { 
+      margin: 0; padding: 0; 
+      background: linear-gradient(135deg, #000, #222); 
+      color: #fff; 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      text-align: center; 
+    }
+    #gameContainer { position: relative; }
+    h1 { text-shadow: 2px 2px 4px rgba(0,0,0,0.6); }
+    canvas { 
+      background: #111; 
+      border: 2px solid #ccc; 
+      display: block; 
+      margin: auto; 
+      box-shadow: 0 0 20px rgba(0,255,0,0.5); 
+    }
+    #chartOverlay { 
+      background: transparent; 
+      border: none; 
+      position: absolute; top: 0; left: 0; 
+      pointer-events: none; 
+    }
+    #hud { 
+      position: absolute; top: 10px; left: 10px; 
+      color: #0f0; font-family: monospace; white-space: pre; 
+      text-shadow: 1px 1px 2px #000; 
+    }
+    #info { 
+      margin-top: 10px; color: #0f0; font-weight: bold; 
+      text-shadow: 1px 1px 2px #000; 
+    }
+    #scoreOverlay {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 64px; color: #ff0; display: none;
+      text-shadow: 3px 3px 5px rgba(0,0,0,0.7);
+    }
+    .hidden { display: none; }
+    .comicBubble {
+      position: absolute; background: #fff; color: #000; padding: 10px;
+      border-radius: 10px; border: 3px solid #000; 
+      font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+      font-size: 24px; transform: translate(-50%, -50%);
+      box-shadow: 5px 5px 0 #000; z-index: 999;
+      animation: fadeOut 2s forwards;
+    }
+    @keyframes fadeOut {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    button {
+      padding: 8px 16px; background: #333; color: #fff;
+      border: none; border-radius: 6px; cursor: pointer; margin: 10px;
+      transition: background 0.3s, transform 0.3s;
+    }
+    button:hover { background: #555; transform: scale(1.05); }
+    #controlButtons {
+      position: absolute; bottom: 20px; left: 50%;
+      transform: translateX(-50%);
+      display: none; z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div id="gameContainer">
+    <h1>DEGEN LANDER</h1>
+    <div id="info"></div>
+    <canvas id="gameCanvas" class="hidden"></canvas>
+    <canvas id="chartOverlay" class="hidden"></canvas>
+    <div id="hud" class="hidden"></div>
+    <div id="scoreOverlay"></div>
+    <div id="controlButtons">
+      <button id="playAgainButton">Play Again</button>
+      <button id="backButton">Go Back to Main Menu</button>
+    </div>
+  </div>
+  
+  <script>
+    // Helper: Parse query parameters
+    function getQueryParams() {
+      const params = {};
+      const queryString = window.location.search.substring(1);
+      queryString.split("&").forEach(pair => {
+        const [key, value] = pair.split("=");
+        if (key) params[decodeURIComponent(key)] = decodeURIComponent(value || "");
+      });
+      return params;
+    }
+    const queryParams = getQueryParams();
+    const playerName = queryParams.playerName || "Anonymous";
+    const stockSymbol = queryParams.stockSymbol || "";
+    
+    // New: Fetch terrain data from a static JSON file for the stock
+    // Expecting a file like stock_GOOGL.json
+    async function fetchTerrainDataStatic(stockSymbol) {
+      const url = `https://benpomme.github.io/degenlander/stock_${stockSymbol}.json`;
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        // Expecting data to be an array of objects with a "4. close" value or similar.
+        // For simplicity, assume data is an array of daily closing prices (numbers)
+        // We'll create terrain points based on these values.
+        if (!Array.isArray(data) || data.length === 0) {
+          throw new Error("Invalid stock data");
+        }
+        const prices = data.map(item => parseFloat(item["4. close"]));
+        const displayCount = prices.length;
+        const minP = Math.min(...prices);
+        const maxP = Math.max(...prices);
+        const range = maxP - minP;
+        const step = canvas.width / (displayCount - 1);
+        let points = [];
+        for (let i = 0; i < displayCount; i++) {
+          let x = i * step;
+          let normalized = (prices[i] - minP) / (range || 1);
+          let y = canvas.height - normalized * (canvas.height * 0.5);
+          points.push({ x, y, price: prices[i] });
+        }
+        return { points, minP, maxP, dates: data.map((d, i) => "Day " + (i + 1)) };
+      } catch (err) {
+        console.error("Error fetching static stock data:", err);
+        info.textContent = "Error fetching stock chart data.";
+        return { points: [], minP: 0, maxP: 0, dates: [] };
+      }
+    }
+    
+    // --- Game Variables & Setup ---
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const overlayCanvas = document.getElementById("chartOverlay");
+    const overlayCtx = overlayCanvas.getContext("2d");
+    const info = document.getElementById("info");
+    const hud = document.getElementById("hud");
+    const scoreOverlay = document.getElementById("scoreOverlay");
+    const backButton = document.getElementById("backButton");
+    const playAgainButton = document.getElementById("playAgainButton");
+    const controlButtons = document.getElementById("controlButtons");
+    
+    let terrainPoints = [];
+    let fetchedMinPrice = 0, fetchedMaxPrice = 0, relevantDates = [];
+    let stars = [], particles = [], powerUp = null;
+    const gravity = 0.003, thrustPower = 0.04, rotationSpeed = 3;
+    let keysPressed = {}, animationFrameId;
+    let lander = { x: 400, y: 50, vx: 0, vy: 0, angle: 0, fuel: 100, isCrashed: false, isLanded: false, score: 0 };
+    const memePhrases = [
+      "TO THE MOON, APES!", "GME YOLO DIAMOND HANDS!", "WE LIKE THE STOCK!",
+      "STONKS ONLY GO UP!", "DIAMOND HANDS FOREVER!", "SEND IT TO VALHALLA!",
+      "HODL TILL YOUR HANDS TURN TO DIAMONDS!", "LAND IT, BITCH!", "MOON OR BUST!",
+      "CRASHING IS FOR NOOBS!", "LIFT OFF, BRO!", "FUEL IN, STARS OUT!",
+      "FINALLY, A REAL LANDING!", "STOCKS AND ROCKS, BABY!", "LET'S DEFY GRAVITY!",
+      "HODL MY BEER, I'M LANDING!", "BUY THE DIP, LAND THE SHIP!",
+      "WHEN LAMBO? NOW!", "CRYPTO TO THE MOON, FINANCE STYLE!", "WEN MOON? NOW, BITCH!"
+    ];
+    // Stupid meme image URLs for occasional popups
+    const memeImages = [
+      "https://i.imgflip.com/1bij.jpg",
+      "https://i.imgflip.com/26am.jpg",
+      "https://i.imgflip.com/3si4.jpg",
+      "https://i.imgflip.com/1otk96.jpg",
+      "https://i.imgflip.com/30b1gx.jpg"
+    ];
+    
+    function initStars() {
+      stars = [];
+      for (let i = 0; i < 100; i++) {
+        stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          size: Math.random() * 2 + 1,
+          alpha: Math.random() * 0.5 + 0.5,
+          twinkle: Math.random() * 0.02 - 0.01
+        });
+      }
+    }
+    function drawStars() {
+      for (let star of stars) {
+        star.alpha += star.twinkle;
+        if (star.alpha > 1) { star.alpha = 1; star.twinkle = -Math.abs(star.twinkle); }
+        if (star.alpha < 0.3) { star.alpha = 0.3; star.twinkle = Math.abs(star.twinkle); }
+        ctx.fillStyle = `rgba(255,255,255,${star.alpha})`;
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    function drawTerrain() {
+      if (!terrainPoints.length) return;
+      ctx.beginPath();
+      ctx.moveTo(terrainPoints[0].x, terrainPoints[0].y);
+      for (let i = 1; i < terrainPoints.length; i++) {
+        ctx.lineTo(terrainPoints[i].x, terrainPoints[i].y);
+      }
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#0f0";
+      ctx.stroke();
+      ctx.lineTo(canvas.width, canvas.height);
+      ctx.lineTo(0, canvas.height);
+      ctx.closePath();
+      ctx.fillStyle = "#030";
+      ctx.fill();
+    }
+    function drawChartAxes() {
+      overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+      if (!terrainPoints.length) return;
+      overlayCtx.strokeStyle = "#888";
+      overlayCtx.lineWidth = 1;
+      overlayCtx.beginPath();
+      overlayCtx.moveTo(50, 0);
+      overlayCtx.lineTo(50, overlayCanvas.height);
+      overlayCtx.moveTo(0, overlayCanvas.height - 50);
+      overlayCtx.lineTo(overlayCanvas.width, overlayCanvas.height - 50);
+      overlayCtx.stroke();
+      overlayCtx.fillStyle = "#ccc";
+      overlayCtx.font = "12px monospace";
+      overlayCtx.textAlign = "right";
+      overlayCtx.fillText(`Max: ${fetchedMaxPrice.toFixed(2)}`, 45, 20);
+      overlayCtx.fillText(`Min: ${fetchedMinPrice.toFixed(2)}`, 45, overlayCanvas.height - 55);
+      overlayCtx.textAlign = "center";
+      const tickCount = 4;
+      const step = Math.floor(relevantDates.length / tickCount);
+      for (let i = 0; i < relevantDates.length; i += step) {
+        const label = relevantDates[i];
+        const dateX = terrainPoints[i].x;
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(dateX + 50, overlayCanvas.height - 50);
+        overlayCtx.lineTo(dateX + 50, overlayCanvas.height - 45);
+        overlayCtx.stroke();
+        overlayCtx.save();
+        overlayCtx.translate(dateX + 50, overlayCanvas.height - 40);
+        overlayCtx.rotate(-Math.PI / 4);
+        overlayCtx.fillText(label, 0, 0);
+        overlayCtx.restore();
+      }
+    }
+    function drawPowerUp() {
+      if (powerUp && !powerUp.collected) {
+        ctx.fillStyle = "gold";
+        ctx.beginPath();
+        ctx.arc(powerUp.x, powerUp.y, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#000";
+        ctx.stroke();
+      }
+    }
+    function drawLander() {
+      ctx.save();
+      ctx.translate(lander.x, lander.y);
+      ctx.rotate((lander.angle * Math.PI) / 180);
+      ctx.beginPath();
+      ctx.moveTo(-10, 10);
+      ctx.lineTo(10, 10);
+      ctx.lineTo(0, -10);
+      ctx.closePath();
+      ctx.fillStyle = "#ff0";
+      ctx.fill();
+      if (keysPressed["ArrowUp"] && lander.fuel > 0 && !lander.isCrashed && !lander.isLanded) {
+        ctx.beginPath();
+        ctx.moveTo(-5, 10);
+        ctx.lineTo(5, 10);
+        ctx.lineTo(0, 20);
+        ctx.closePath();
+        ctx.fillStyle = "orange";
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+    function drawParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx; p.y += p.vy;
+        p.life -= 1; p.alpha = p.life / 30;
+        ctx.fillStyle = `rgba(255,165,0,${p.alpha})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+        if (p.life <= 0) { particles.splice(i, 1); }
+      }
+    }
+    function drawHUD() {
+      hud.textContent = `Fuel: ${lander.fuel.toFixed(1)}\nScore: $${lander.score}`;
+    }
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawStars(); drawTerrain(); drawPowerUp(); drawParticles(); drawLander(); drawHUD();
+    }
+    function updateLander() {
+      if (lander.isCrashed || lander.isLanded) return;
+      if (keysPressed["ArrowLeft"]) { lander.angle -= rotationSpeed; }
+      if (keysPressed["ArrowRight"]) { lander.angle += rotationSpeed; }
+      if (keysPressed["ArrowUp"] && lander.fuel > 0) {
+        const rad = (lander.angle * Math.PI) / 180;
+        const ax = Math.sin(rad) * thrustPower;
+        const ay = -Math.cos(rad) * thrustPower;
+        lander.vx += ax; lander.vy += ay;
+        lander.fuel = Math.max(lander.fuel - 0.1, 0);
+        particles.push({
+          x: lander.x - Math.sin(rad) * 10,
+          y: lander.y + Math.cos(rad) * 10,
+          vx: -Math.sin(rad) * (Math.random() * 1 + 0.5),
+          vy: Math.cos(rad) * (Math.random() * 1 + 0.5),
+          alpha: 1, life: 30
+        });
+        if (Math.random() < 0.002) {
+          showMemePopup(lander.x + 50, lander.y);
+        } else if (Math.random() < 0.005) {
+          showComicBubble(memePhrases[Math.floor(Math.random() * memePhrases.length)], lander.x + 50, lander.y);
+        }
+      }
+      lander.vy += gravity;
+      lander.x += lander.vx;
+      lander.y += lander.vy;
+      if (lander.x < 0) { lander.x = 0; lander.vx = 0; }
+      else if (lander.x > canvas.width) { lander.x = canvas.width; lander.vx = 0; }
+      if (lander.y < 0) { lander.y = 0; lander.vy = 0; }
+      if (lander.y > canvas.height) {
+        lander.y = canvas.height;
+        lander.isCrashed = true;
+        info.textContent = `You fucking crashed on ${stockSymbol}!`;
+        crashSound.play();
+        endGame();
+        return;
+      }
+      for (let i = 0; i < terrainPoints.length - 1; i++) {
+        const p1 = terrainPoints[i], p2 = terrainPoints[i + 1];
+        if (lander.x >= p1.x && lander.x <= p2.x) {
+          const terrainY = p1.y + ((p2.y - p1.y) * (lander.x - p1.x)) / (p2.x - p1.x);
+          const terrainPrice = p1.price + ((p2.price - p1.price) * (lander.x - p1.x)) / (p2.x - p1.x);
+          if (lander.y >= terrainY) {
+            const vspeed = Math.abs(lander.vy);
+            const hspeed = Math.abs(lander.vx);
+            const angleDiff = Math.abs(lander.angle % 360);
+            if (vspeed < 0.5 && hspeed < 0.5 && angleDiff < 15) {
+              lander.isLanded = true;
+              lander.score = Math.round(lander.fuel * terrainPrice);
+              const phrase = memePhrases[Math.floor(Math.random() * memePhrases.length)];
+              info.textContent = `${phrase} Landed on $${terrainPrice.toFixed(2)}! Score: $${lander.score}`;
+              landingSound.play();
+              endGame();
+              saveLeaderboard(playerName, stockSymbol, lander.score);
+              break;
+            } else {
+              lander.isCrashed = true;
+              info.textContent = `You fucking crashed on ${stockSymbol}!`;
+              crashSound.play();
+              endGame();
+              break;
+            }
+          }
+        }
+      }
+      if (powerUp && !powerUp.collected) {
+        const dx = lander.x - powerUp.x, dy = lander.y - powerUp.y;
+        if (Math.sqrt(dx * dx + dy * dy) < 15) {
+          powerUp.collected = true;
+          lander.fuel = Math.min(lander.fuel + 20, 100);
+          info.textContent = "Power-up collected! Extra fuel!";
+        }
+      }
+    }
+    function gameLoop() {
+      updateLander();
+      draw();
+      if (!lander.isCrashed && !lander.isLanded) {
+        animationFrameId = requestAnimationFrame(gameLoop);
+      }
+    }
+    function showComicBubble(text, x, y) {
+      const bubble = document.createElement("div");
+      bubble.className = "comicBubble";
+      bubble.textContent = text;
+      bubble.style.left = x + "px";
+      bubble.style.top = y + "px";
+      document.body.appendChild(bubble);
+      setTimeout(() => { bubble.remove(); }, 2000);
+    }
+    function showMemePopup(x, y) {
+      const img = document.createElement("img");
+      const memeUrl = memeImages[Math.floor(Math.random() * memeImages.length)];
+      img.src = memeUrl;
+      img.style.position = "absolute";
+      img.style.left = x + "px";
+      img.style.top = y + "px";
+      img.style.width = "150px";
+      img.style.border = "3px solid #000";
+      img.style.borderRadius = "10px";
+      document.body.appendChild(img);
+      setTimeout(() => { img.remove(); }, 2500);
+    }
+    // --- Sound Effects (updated URLs) ---
+    const thrustSound = new Audio("https://www.soundjay.com/mechanical/sounds/rocket-launch-1.mp3");
+    const landingSound = new Audio("https://www.soundjay.com/misc/sounds/success-fanfare-trumpets-01.mp3");
+    const crashSound = new Audio("https://www.soundjay.com/misc/sounds/failure-sound-01.mp3");
+    // --- Responsive Canvas ---
+    function resizeCanvas() {
+      canvas.width = window.innerWidth * 0.8;
+      canvas.height = window.innerHeight * 0.8;
+      overlayCanvas.width = canvas.width;
+      overlayCanvas.height = canvas.height;
+      drawChartAxes();
+    }
+    window.addEventListener("resize", resizeCanvas);
+    function drawChartAxes() {
+      overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+      if (!terrainPoints.length) return;
+      overlayCtx.strokeStyle = "#888";
+      overlayCtx.lineWidth = 1;
+      overlayCtx.beginPath();
+      overlayCtx.moveTo(50, 0);
+      overlayCtx.lineTo(50, overlayCanvas.height);
+      overlayCtx.moveTo(0, overlayCanvas.height - 50);
+      overlayCtx.lineTo(overlayCanvas.width, overlayCanvas.height - 50);
+      overlayCtx.stroke();
+      overlayCtx.fillStyle = "#ccc";
+      overlayCtx.font = "12px monospace";
+      overlayCtx.textAlign = "right";
+      overlayCtx.fillText(`Max: ${fetchedMaxPrice.toFixed(2)}`, 45, 20);
+      overlayCtx.fillText(`Min: ${fetchedMinPrice.toFixed(2)}`, 45, overlayCanvas.height - 55);
+      overlayCtx.textAlign = "center";
+      const tickCount = 4;
+      const step = Math.floor(relevantDates.length / tickCount);
+      for (let i = 0; i < relevantDates.length; i += step) {
+        const label = relevantDates[i];
+        const dateX = terrainPoints[i].x;
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(dateX + 50, overlayCanvas.height - 50);
+        overlayCtx.lineTo(dateX + 50, overlayCanvas.height - 45);
+        overlayCtx.stroke();
+        overlayCtx.save();
+        overlayCtx.translate(dateX + 50, overlayCanvas.height - 40);
+        overlayCtx.rotate(-Math.PI / 4);
+        overlayCtx.fillText(label, 0, 0);
+        overlayCtx.restore();
+      }
+    }
+    function saveLeaderboard(name, stock, score) {
+      let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+      leaderboard.push({ name, stock, score });
+      localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+    }
+    function drawHUD() {
+      hud.textContent = `Fuel: ${lander.fuel.toFixed(1)}\nScore: $${lander.score}`;
+    }
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawStars(); drawTerrain(); drawPowerUp(); drawParticles(); drawLander(); drawHUD();
+    }
+    function handleKeyDown(e) {
+      if (e.key === "ArrowUp" && !keysPressed["ArrowUp"]) {
+        thrustSound.loop = true;
+        thrustSound.play();
+      }
+      keysPressed[e.key] = true;
+    }
+    function handleKeyUp(e) {
+      keysPressed[e.key] = false;
+      if (e.key === "ArrowUp") {
+        thrustSound.pause();
+        thrustSound.currentTime = 0;
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keyup", handleKeyUp);
+    backButton.addEventListener("click", () => {
+      window.close();
+      // Alternatively, window.location.href = "index.html";
+    });
+    playAgainButton.addEventListener("click", () => {
+      scoreOverlay.style.display = "none";
+      controlButtons.style.display = "none";
+      info.textContent = "";
+      lander = { x: 400, y: 50, vx: 0, vy: 0, angle: 0, fuel: 100, isCrashed: false, isLanded: false, score: 0 };
+      keysPressed = {};
+      particles = [];
+      powerUp = null;
+      initStars();
+      initGame();
+    });
+    async function initGame() {
+      resizeCanvas();
+      initStars();
+      // Use static JSON for the chosen stock's historical data
+      const result = await fetchTerrainDataStatic(stockSymbol);
+      terrainPoints = result.points;
+      if (!terrainPoints.length) {
+        info.textContent = "No terrain generated. Game cannot start.";
+        return;
+      }
+      info.textContent = "";
+      fetchedMinPrice = result.minP;
+      fetchedMaxPrice = result.maxP;
+      relevantDates = result.dates;
+      if (terrainPoints.length >= 2) {
+        const index = Math.floor(Math.random() * (terrainPoints.length - 1));
+        const p1 = terrainPoints[index];
+        const p2 = terrainPoints[index + 1];
+        const x = (p1.x + p2.x) / 2;
+        const y = (p1.y + p2.y) / 2 - 30;
+        powerUp = { x, y, collected: false };
+      }
+      canvas.classList.remove("hidden");
+      overlayCanvas.classList.remove("hidden");
+      hud.classList.remove("hidden");
+      gameLoop();
+    }
+    window.addEventListener("resize", resizeCanvas);
+    window.onload = initGame;
+  </script>
+</body>
+</html>
