@@ -11,7 +11,6 @@
     body { 
       margin: 0;
       padding: 0;
-      /* Neon-inspired gradient with flicker animation */
       background: linear-gradient(45deg, #141414, #222);
       animation: neonFlicker 5s infinite;
       color: #fff;
@@ -147,7 +146,6 @@
       measurementId: "G-38X89CMKNS"
     };
 
-    // Initialize Firebase and Firestore
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
@@ -170,12 +168,16 @@
     window.saveLeaderboard = saveLeaderboard;
   </script>
   
-  <!-- Game Logic Script (terrain generation and game functionality unchanged) -->
+  <!-- Game Logic Script with Debug Logging and Updated Proxy -->
   <script>
-    // Global variable to store the close price
+    // Debug: Log current page URL
+    console.log("Current page URL:", window.location.href);
+    if(window.location.protocol === "file:") {
+      document.getElementById("info").textContent = "WARNING: Please run via a web server (e.g., Live Server) instead of opening the file directly.";
+    }
+
     let closePrice = 0;
 
-    // Helper: Parse query parameters
     function getQueryParams() {
       const params = {};
       const queryString = window.location.search.substring(1);
@@ -187,16 +189,19 @@
     }
     const queryParams = getQueryParams();
     const playerName = queryParams.playerName || "Anonymous";
-    // IMPORTANT: Default to "AAPL" if no stock symbol is provided.
+    // Default to AAPL if no stock symbol is provided
     const stockSymbol = queryParams.stockSymbol || "AAPL";
     
-    // Fetch terrain data (same as your working version)
+    // Use a CORS proxy from ThingProxy to overcome CORS issues.
     async function fetchTerrainDataStatic(stockSymbol) {
-      const url = `https://benpomme.github.io/degenlander/stock_${stockSymbol}.json`;
-      // Uncomment the next line for debugging the URL:
-      // console.log("Fetching terrain data from:", url);
+      const baseUrl = `https://benpomme.github.io/degenlander/stock_${stockSymbol}.json`;
+      const proxyUrl = `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(baseUrl)}`;
+      console.log("Fetching terrain data via proxy from:", proxyUrl);
       try {
-        const response = await fetch(url);
+        const response = await fetch(proxyUrl);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
         if (!Array.isArray(data) || data.length === 0) {
           throw new Error("Invalid or empty stock data");
@@ -228,7 +233,7 @@
       }
     }
     
-    // --- Game Variables & Setup (unchanged) ---
+    // --- Game Variables & Setup ---
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
     const overlayCanvas = document.getElementById("chartOverlay");
@@ -437,7 +442,6 @@
         const p2 = terrainPoints[i + 1];
         if (lander.x >= p1.x && lander.x <= p2.x) {
           const terrainY = p1.y + ((p2.y - p1.y) * (lander.x - p1.x)) / (p2.x - p1.x);
-          // landingPrice is interpolated from the terrain points:
           const terrainPrice = p1.price + ((p2.price - p1.price) * (lander.x - p1.x)) / (p2.x - p1.x);
           if (lander.y >= terrainY) {
             const vspeed = Math.abs(lander.vy);
@@ -445,7 +449,6 @@
             const angleDiff = Math.abs(lander.angle % 360);
             if (vspeed < 0.5 && hspeed < 0.5 && angleDiff < 15) {
               lander.isLanded = true;
-              // New score calculation: (closePrice - landingPrice) x fuel left
               lander.score = Math.round((closePrice - terrainPrice) * lander.fuel);
               const phrase = memePhrases[Math.floor(Math.random() * memePhrases.length)];
               info.textContent = `${phrase} Landed on $${terrainPrice.toFixed(2)} (Close: $${closePrice.toFixed(2)})! Score: $${lander.score}`;
@@ -515,7 +518,6 @@
     }
     window.addEventListener("resize", resizeCanvas);
     
-    // End the game: stop the loop and show the restart/back buttons
     function endGame() {
       cancelAnimationFrame(animationFrameId);
       controlButtons.style.display = "block";
@@ -523,7 +525,6 @@
       scoreOverlay.textContent = `Score: $${lander.score}`;
     }
     
-    // Event listeners for keyboard input
     function handleKeyDown(e) {
       if (e.key === "ArrowUp" && !keysPressed["ArrowUp"]) {
         thrustSound.loop = true;
@@ -541,7 +542,6 @@
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("keyup", handleKeyUp);
     
-    // Navigation buttons
     backButton.addEventListener("click", () => {
       window.location.href = "index.html";
     });
@@ -557,13 +557,12 @@
       initGame();
     });
     
-    let result; // Global to store fetched terrain data
+    let result; // Global variable for fetched terrain data
     async function initGame() {
       resizeCanvas();
       initStars();
       result = await fetchTerrainDataStatic(stockSymbol);
       terrainPoints = result.points;
-      // Save the close price for score calculation
       closePrice = result.closePrice;
       if (!terrainPoints.length) {
         info.textContent = "No terrain generated. Game cannot start.";
