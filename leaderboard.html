@@ -5,23 +5,23 @@
   <title>DEGEN LANDER - Leaderboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { 
-      margin: 0; padding: 20px; 
-      background: #000; color: #fff; 
-      font-family: sans-serif; text-align: center; 
+    body {
+      margin: 0; padding: 20px;
+      background: #000; color: #fff;
+      font-family: sans-serif; text-align: center;
     }
-    table { 
-      width: 90%; margin: auto; 
-      border-collapse: collapse; 
+    table {
+      width: 90%; margin: auto;
+      border-collapse: collapse;
     }
-    th, td { 
-      border: 1px solid #555; padding: 8px; 
+    th, td {
+      border: 1px solid #555; padding: 8px;
     }
     th { background: #222; }
     button {
-      padding: 8px 16px; background: #333; 
-      color: #fff; border: none; border-radius: 6px; 
-      cursor: pointer; margin-top: 20px; 
+      padding: 8px 16px; background: #333;
+      color: #fff; border: none; border-radius: 6px;
+      cursor: pointer; margin-top: 20px;
       transition: background 0.3s, transform 0.3s;
     }
     button:hover { background: #555; transform: scale(1.05); }
@@ -38,6 +38,9 @@
         document.getElementById("leaderboardContainer").innerHTML = "<p>No entries yet.</p>";
         return;
       }
+      // You can sort if you like, e.g., by highest score:
+      // leaderboard.sort((a, b) => b.score - a.score);
+
       let html = "<table><thead><tr><th>Name</th><th>Stock</th><th>Score ($)</th></tr></thead><tbody>";
       leaderboard.forEach(entry => {
         html += `<tr>
@@ -49,9 +52,11 @@
       html += "</tbody></table>";
       document.getElementById("leaderboardContainer").innerHTML = html;
     }
+
     document.getElementById("backButton").addEventListener("click", () => {
       window.location.href = "index.html";
     });
+
     window.onload = loadLeaderboard;
   </script>
 </body>

@@ -98,9 +98,14 @@
         alert("Please enter your name.");
         return;
       }
-      // Open game.html in a new window with query parameters for playerName and stockSymbol
+      // Open game in a popup window instead of a new tab
       const url = `game.html?playerName=${encodeURIComponent(playerName)}&stockSymbol=${encodeURIComponent(stockTicker)}`;
-      window.open(url, "_blank");
+      // 1024x768 popup
+      window.open(
+        url,
+        "DegenLanderPopup",
+        "width=1024,height=768,resizable=yes,scrollbars=yes"
+      );
     }
     
     document.getElementById("leaderboardButton").addEventListener("click", () => {
