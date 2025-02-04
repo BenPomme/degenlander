@@ -28,9 +28,8 @@
   </table>
   <button id="backToMenu">Back to Menu</button>
   
-  <!-- Use module script to load Firebase and Firestore -->
+  <!-- Firebase Scripts (using modules) -->
   <script type="module">
-    // Import required Firebase modules from the CDN
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
     import { getFirestore, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
@@ -85,5 +84,8 @@
     
     window.onload = loadLeaderboard;
   </script>
+  
+  <!-- Buy Me A Coffee Widget -->
+  <script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" data-id="degenben" data-description="Support me on Buy me a coffee!" data-message="Golden hands, tip me so that I can put a bitcoin in Uranus." data-color="#FF5F5F" data-position="Right" data-x_margin="18" data-y_margin="18"></script>
 </body>
 </html>
