@@ -168,10 +168,10 @@
     window.saveLeaderboard = saveLeaderboard;
   </script>
   
-  <!-- Game Logic Script with Debug Logging using ThingProxy -->
+  <!-- Game Logic Script with Debug Logging and updated proxy using corsproxy.io with API key -->
   <script>
     console.log("Current page URL:", window.location.href);
-    if (window.location.protocol === "file:") {
+    if(window.location.protocol === "file:") {
       document.getElementById("info").textContent = "WARNING: Please run via a web server (e.g., Live Server) instead of opening the file directly.";
     }
 
@@ -188,12 +188,14 @@
     }
     const queryParams = getQueryParams();
     const playerName = queryParams.playerName || "Anonymous";
+    // Default to AAPL if no stock symbol is provided
     const stockSymbol = queryParams.stockSymbol || "AAPL";
     
-    // Use ThingProxy as our CORS proxy.
+    // Use corsproxy.io with your API key to bypass CORS
     async function fetchTerrainDataStatic(stockSymbol) {
       const baseUrl = `https://benpomme.github.io/degenlander/stock_${stockSymbol}.json`;
-      const proxyUrl = `https://thingproxy.freeboard.io/fetch/${baseUrl}`;
+      // Construct the proxy URL using your API key.
+      const proxyUrl = `https://corsproxy.io/?key=dcf28481&url=${encodeURIComponent(baseUrl)}`;
       console.log("Fetching terrain data via proxy from:", proxyUrl);
       try {
         const response = await fetch(proxyUrl);
