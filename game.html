@@ -105,11 +105,53 @@
     <div id="hud" class="hidden"></div>
     <div id="scoreOverlay"></div>
     <div id="controlButtons">
-      <button id="playAgainButton">Play Again</button>
-      <button id="backButton">Go Back to Main Menu</button>
+      <button id="playAgainButton">Restart</button>
+      <button id="backButton">Back to Menu</button>
     </div>
   </div>
   
+  <!-- Firebase Integration Module -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCol18DWGnK9NgxDK2h7YwTOGGegNSlJGM",
+      authDomain: "degenlander.firebaseapp.com",
+      projectId: "degenlander",
+      storageBucket: "degenlander.firebasestorage.app",
+      messagingSenderId: "520104814068",
+      appId: "1:520104814068:web:07e9042a7077c603fa05a1",
+      measurementId: "G-38X89CMKNS"
+    };
+
+    // Initialize Firebase and Firestore
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Define a function to save leaderboard data to Firestore.
+    // Also save to localStorage as a fallback.
+    async function saveLeaderboard(name, stock, score) {
+      try {
+        await addDoc(collection(db, "leaderboard"), {
+          name: name,
+          stock: stock,
+          score: score,
+          timestamp: serverTimestamp()
+        });
+        console.log("Score saved to Firebase");
+      } catch (error) {
+        console.error("Error saving score: ", error);
+      }
+      let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+      leaderboard.push({ name, stock, score });
+      localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+    }
+    // Expose the function to the global scope so that game logic can call it.
+    window.saveLeaderboard = saveLeaderboard;
+  </script>
+  
+  <!-- Game Logic Script (non-module) -->
   <script>
     // Helper: Parse query parameters
     function getQueryParams() {
@@ -125,13 +167,12 @@
     const playerName = queryParams.playerName || "Anonymous";
     const stockSymbol = queryParams.stockSymbol || "";
     
-    // Fetch static stock chart data (expects a file like stock_GOOGL.json)
+    // (Assuming your stock chart data is fetched from a remote JSON URL based on the ticker)
     async function fetchTerrainDataStatic(stockSymbol) {
       const url = `https://benpomme.github.io/degenlander/stock_${stockSymbol}.json`;
       try {
         const response = await fetch(url);
         const data = await response.json();
-        // Assume data is an array of objects with a "4. close" property
         if (!Array.isArray(data) || data.length === 0) {
           throw new Error("Invalid or empty stock data");
         }
@@ -183,7 +224,6 @@
       "HODL MY BEER, I'M LANDING!", "BUY THE DIP, LAND THE SHIP!",
       "WHEN LAMBO? NOW!", "CRYPTO TO THE MOON, FINANCE STYLE!", "WEN MOON? NOW, BITCH!"
     ];
-    // Array of meme image URLs for occasional popups
     const memeImages = [
       "https://i.imgflip.com/1bij.jpg",
       "https://i.imgflip.com/26am.jpg",
@@ -356,7 +396,7 @@
       if (lander.y > canvas.height) {
         lander.y = canvas.height;
         lander.isCrashed = true;
-        info.textContent = `You fucking crashed on ${stockSymbol}!`;
+        info.textContent = `You crashed on ${stockSymbol}!`;
         crashSound.play();
         endGame();
         return;
@@ -377,12 +417,13 @@
               const phrase = memePhrases[Math.floor(Math.random() * memePhrases.length)];
               info.textContent = `${phrase} Landed on $${terrainPrice.toFixed(2)}! Score: $${lander.score}`;
               landingSound.play();
-              endGame();
+              // Save the score via the global saveLeaderboard function
               saveLeaderboard(playerName, stockSymbol, lander.score);
+              endGame();
               break;
             } else {
               lander.isCrashed = true;
-              info.textContent = `You fucking crashed on ${stockSymbol}!`;
+              info.textContent = `You crashed on ${stockSymbol}!`;
               crashSound.play();
               endGame();
               break;
@@ -441,56 +482,16 @@
       drawChartAxes();
     }
     window.addEventListener("resize", resizeCanvas);
-    function drawChartAxes() {
-      overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-      if (!terrainPoints.length) return;
-      overlayCtx.strokeStyle = "#888";
-      overlayCtx.lineWidth = 1;
-      overlayCtx.beginPath();
-      overlayCtx.moveTo(50, 0);
-      overlayCtx.lineTo(50, overlayCanvas.height);
-      overlayCtx.moveTo(0, overlayCanvas.height - 50);
-      overlayCtx.lineTo(overlayCanvas.width, overlayCanvas.height - 50);
-      overlayCtx.stroke();
-      overlayCtx.fillStyle = "#ccc";
-      overlayCtx.font = "12px monospace";
-      overlayCtx.textAlign = "right";
-      overlayCtx.fillText(`Max: ${fetchedMaxPrice.toFixed(2)}`, 45, 20);
-      overlayCtx.fillText(`Min: ${fetchedMinPrice.toFixed(2)}`, 45, overlayCanvas.height - 55);
-      overlayCtx.textAlign = "center";
-      const tickCount = 4;
-      const step = Math.floor(relevantDates.length / tickCount);
-      for (let i = 0; i < relevantDates.length; i += step) {
-        const label = relevantDates[i];
-        const dateX = terrainPoints[i].x;
-        overlayCtx.beginPath();
-        overlayCtx.moveTo(dateX + 50, overlayCanvas.height - 50);
-        overlayCtx.lineTo(dateX + 50, overlayCanvas.height - 45);
-        overlayCtx.stroke();
-        overlayCtx.save();
-        overlayCtx.translate(dateX + 50, overlayCanvas.height - 40);
-        overlayCtx.rotate(-Math.PI / 4);
-        overlayCtx.fillText(label, 0, 0);
-        overlayCtx.restore();
-      }
+    
+    // End the game: stop the loop and show the restart/back buttons
+    function endGame() {
+      cancelAnimationFrame(animationFrameId);
+      controlButtons.style.display = "block";
+      scoreOverlay.style.display = "block";
+      scoreOverlay.textContent = `Score: $${lander.score}`;
     }
-    function saveLeaderboard(name, stock, score) {
-      let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
-      leaderboard.push({ name, stock, score });
-      localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
-    }
-    function drawHUD() {
-      hud.textContent = `Fuel: ${lander.fuel.toFixed(1)}\nScore: $${lander.score}`;
-    }
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawStars();
-      drawTerrain();
-      drawPowerUp();
-      drawParticles();
-      drawLander();
-      drawHUD();
-    }
+    
+    // Event listeners for keyboard input
     function handleKeyDown(e) {
       if (e.key === "ArrowUp" && !keysPressed["ArrowUp"]) {
         thrustSound.loop = true;
@@ -507,9 +508,10 @@
     }
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("keyup", handleKeyUp);
+    
+    // Navigation buttons
     backButton.addEventListener("click", () => {
-      window.close();
-      // Alternatively, window.location.href = "index.html";
+      window.location.href = "index.html";
     });
     playAgainButton.addEventListener("click", () => {
       scoreOverlay.style.display = "none";
@@ -525,7 +527,6 @@
     async function initGame() {
       resizeCanvas();
       initStars();
-      // Fetch static terrain data for the chosen stock
       const result = await fetchTerrainDataStatic(stockSymbol);
       terrainPoints = result.points;
       if (!terrainPoints.length) {
@@ -536,7 +537,6 @@
       fetchedMinPrice = result.minP;
       fetchedMaxPrice = result.maxP;
       relevantDates = result.dates;
-      // Spawn a power-up on the terrain if possible
       if (terrainPoints.length >= 2) {
         const index = Math.floor(Math.random() * (terrainPoints.length - 1));
         const p1 = terrainPoints[index];
@@ -550,7 +550,6 @@
       hud.classList.remove("hidden");
       gameLoop();
     }
-    window.addEventListener("resize", resizeCanvas);
     window.onload = initGame;
   </script>
 </body>

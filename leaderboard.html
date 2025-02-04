@@ -5,58 +5,84 @@
   <title>DEGEN LANDER - Leaderboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
-      margin: 0; padding: 20px;
-      background: #000; color: #fff;
-      font-family: sans-serif; text-align: center;
-    }
-    table {
-      width: 90%; margin: auto;
-      border-collapse: collapse;
-    }
-    th, td {
-      border: 1px solid #555; padding: 8px;
-    }
-    th { background: #222; }
-    button {
-      padding: 8px 16px; background: #333;
-      color: #fff; border: none; border-radius: 6px;
-      cursor: pointer; margin-top: 20px;
-      transition: background 0.3s, transform 0.3s;
-    }
-    button:hover { background: #555; transform: scale(1.05); }
+    body { background: #222; color: #fff; font-family: sans-serif; text-align: center; }
+    table { margin: 20px auto; border-collapse: collapse; width: 80%; }
+    th, td { border: 1px solid #555; padding: 10px; }
+    th { background: #333; }
+    tr:nth-child(even) { background: #2a2a2a; }
+    button { padding: 10px 20px; margin: 20px; font-size: 16px; }
   </style>
 </head>
 <body>
   <h1>Leaderboard</h1>
-  <div id="leaderboardContainer"></div>
-  <button id="backButton">Back to Main Menu</button>
-  <script>
-    function loadLeaderboard() {
-      let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
-      if (leaderboard.length === 0) {
-        document.getElementById("leaderboardContainer").innerHTML = "<p>No entries yet.</p>";
-        return;
-      }
-      // You can sort if you like, e.g., by highest score:
-      // leaderboard.sort((a, b) => b.score - a.score);
+  <table id="leaderboardTable">
+    <thead>
+      <tr>
+        <th>Player Name</th>
+        <th>Stock</th>
+        <th>Score</th>
+      </tr>
+    </thead>
+    <tbody id="leaderboardBody">
+    </tbody>
+  </table>
+  <button id="backToMenu">Back to Menu</button>
+  
+  <!-- Use module script to load Firebase and Firestore -->
+  <script type="module">
+    // Import required Firebase modules from the CDN
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getFirestore, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-      let html = "<table><thead><tr><th>Name</th><th>Stock</th><th>Score ($)</th></tr></thead><tbody>";
-      leaderboard.forEach(entry => {
-        html += `<tr>
-          <td>${entry.name}</td>
-          <td>${entry.stock}</td>
-          <td>$${entry.score}</td>
-        </tr>`;
-      });
-      html += "</tbody></table>";
-      document.getElementById("leaderboardContainer").innerHTML = html;
+    // Your Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCol18DWGnK9NgxDK2h7YwTOGGegNSlJGM",
+      authDomain: "degenlander.firebaseapp.com",
+      projectId: "degenlander",
+      storageBucket: "degenlander.firebasestorage.app",
+      messagingSenderId: "520104814068",
+      appId: "1:520104814068:web:07e9042a7077c603fa05a1",
+      measurementId: "G-38X89CMKNS"
+    };
+
+    // Initialize Firebase and Firestore
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Function to load leaderboard data from Firestore
+    async function loadLeaderboard() {
+      const leaderboardBody = document.getElementById("leaderboardBody");
+      leaderboardBody.innerHTML = "";
+      try {
+        const leaderboardQuery = query(
+          collection(db, "leaderboard"),
+          orderBy("score", "desc"),
+          limit(10)
+        );
+        const querySnapshot = await getDocs(leaderboardQuery);
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${data.name}</td><td>${data.stock}</td><td>${data.score}</td>`;
+          leaderboardBody.appendChild(row);
+        });
+      } catch (error) {
+        console.error("Error fetching leaderboard: ", error);
+        // Fallback: load from localStorage if Firestore fails
+        let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+        leaderboard.sort((a, b) => b.score - a.score);
+        leaderboard.slice(0, 10).forEach(entry => {
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${entry.name}</td><td>${entry.stock}</td><td>${entry.score}</td>`;
+          leaderboardBody.appendChild(row);
+        });
+      }
     }
 
-    document.getElementById("backButton").addEventListener("click", () => {
+    document.getElementById("backToMenu").addEventListener("click", () => {
       window.location.href = "index.html";
     });
-
+    
     window.onload = loadLeaderboard;
   </script>
 </body>
