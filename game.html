@@ -4,18 +4,35 @@
   <meta charset="UTF-8">
   <title>DEGEN LANDER - Game</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Import the retro font for degen aesthetics -->
+  <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
   <style>
-    /* Game Styles */
+    /* Global Styles with a degen neon aesthetic */
     body { 
       margin: 0;
       padding: 0;
-      background: linear-gradient(135deg, #000, #222);
+      background: linear-gradient(45deg, #141414, #222);
+      animation: neonFlicker 5s infinite;
       color: #fff;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Press Start 2P', cursive;
       text-align: center;
     }
+    @keyframes neonFlicker {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.2); }
+    }
     #gameContainer { position: relative; }
-    h1 { text-shadow: 2px 2px 4px rgba(0,0,0,0.6); }
+    h1 { 
+      font-size: 2rem;
+      color: #fff;
+      text-shadow: 0 0 5px #00FFFF, 0 0 10px #00FFFF, 0 0 20px #FF00FF, 0 0 30px #FF00FF;
+      animation: glow 1.5s ease-in-out infinite alternate;
+      margin: 20px 0;
+    }
+    @keyframes glow {
+      from { text-shadow: 0 0 5px #00FFFF, 0 0 10px #00FFFF, 0 0 20px #FF00FF, 0 0 30px #FF00FF; }
+      to { text-shadow: 0 0 20px #00FFFF, 0 0 30px #00FFFF, 0 0 40px #FF00FF, 0 0 50px #FF00FF; }
+    }
     canvas { 
       background: #111;
       border: 2px solid #ccc;
@@ -75,17 +92,21 @@
       0% { opacity: 1; }
       100% { opacity: 0; }
     }
+    /* Redesigned buttons with neon borders */
     button {
       padding: 8px 16px;
-      background: #333;
+      background: transparent;
+      border: 2px solid #FF5F5F;
       color: #fff;
-      border: none;
-      border-radius: 6px;
+      font-family: 'Press Start 2P', cursive;
       cursor: pointer;
       margin: 10px;
-      transition: background 0.3s, transform 0.3s;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
-    button:hover { background: #555; transform: scale(1.05); }
+    button:hover { 
+      transform: scale(1.05);
+      box-shadow: 0 0 10px #FF5F5F;
+    }
     #controlButtons {
       position: absolute;
       bottom: 20px;
