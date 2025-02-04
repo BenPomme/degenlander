@@ -7,13 +7,15 @@
   <!-- Import the retro font for degen aesthetics -->
   <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
   <style>
-    /* Global Styles with a degen neon aesthetic */
+    /* New degen graphical improvements */
     body { 
       margin: 0;
       padding: 0;
+      /* Changed gradient and added neon flicker animation */
       background: linear-gradient(45deg, #141414, #222);
       animation: neonFlicker 5s infinite;
       color: #fff;
+      /* Use the retro font instead of Segoe UI */
       font-family: 'Press Start 2P', cursive;
       text-align: center;
     }
@@ -24,14 +26,14 @@
     #gameContainer { position: relative; }
     h1 { 
       font-size: 2rem;
-      color: #fff;
+      /* Neon glow effect */
       text-shadow: 0 0 5px #00FFFF, 0 0 10px #00FFFF, 0 0 20px #FF00FF, 0 0 30px #FF00FF;
       animation: glow 1.5s ease-in-out infinite alternate;
       margin: 20px 0;
     }
     @keyframes glow {
       from { text-shadow: 0 0 5px #00FFFF, 0 0 10px #00FFFF, 0 0 20px #FF00FF, 0 0 30px #FF00FF; }
-      to { text-shadow: 0 0 20px #00FFFF, 0 0 30px #00FFFF, 0 0 40px #FF00FF, 0 0 50px #FF00FF; }
+      to   { text-shadow: 0 0 20px #00FFFF, 0 0 30px #00FFFF, 0 0 40px #FF00FF, 0 0 50px #FF00FF; }
     }
     canvas { 
       background: #111;
@@ -98,10 +100,11 @@
       background: transparent;
       border: 2px solid #FF5F5F;
       color: #fff;
-      font-family: 'Press Start 2P', cursive;
+      border-radius: 6px;
       cursor: pointer;
       margin: 10px;
-      transition: transform 0.2s, box-shadow 0.2s;
+      transition: transform 0.3s, box-shadow 0.3s;
+      font-family: 'Press Start 2P', cursive;
     }
     button:hover { 
       transform: scale(1.05);
@@ -131,7 +134,7 @@
     </div>
   </div>
   
-  <!-- Firebase Integration Module -->
+  <!-- Firebase Integration Module (unchanged) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
     import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
@@ -150,8 +153,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Define a function to save leaderboard data to Firestore.
-    // Also save to localStorage as a fallback.
     async function saveLeaderboard(name, stock, score) {
       try {
         await addDoc(collection(db, "leaderboard"), {
@@ -168,13 +169,15 @@
       leaderboard.push({ name, stock, score });
       localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
     }
-    // Expose the function to the global scope so that game logic can call it.
     window.saveLeaderboard = saveLeaderboard;
   </script>
   
-  <!-- Game Logic Script (non-module) -->
+  <!-- Game Logic Script (functionality intact) -->
   <script>
-    // Use a default stock symbol if none is provided
+    // Global variable to store the close price
+    let closePrice = 0;
+
+    // Helper: Parse query parameters
     function getQueryParams() {
       const params = {};
       const queryString = window.location.search.substring(1);
@@ -186,22 +189,17 @@
     }
     const queryParams = getQueryParams();
     const playerName = queryParams.playerName || "Anonymous";
-    // Default to "AAPL" if no stock is specified
-    const stockSymbol = queryParams.stockSymbol || "AAPL";
-
-    // Fetch terrain data from your GitHub repository
+    const stockSymbol = queryParams.stockSymbol || "";
+    
+    // Fetch terrain data (unchanged function)
     async function fetchTerrainDataStatic(stockSymbol) {
       const url = `https://benpomme.github.io/degenlander/stock_${stockSymbol}.json`;
       try {
         const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
         const data = await response.json();
         if (!Array.isArray(data) || data.length === 0) {
-          throw new Error("Invalid or empty terrain data");
+          throw new Error("Invalid or empty stock data");
         }
-        // Map using the "4. close" property from the JSON data
         const prices = data.map(item => parseFloat(item["4. close"]));
         const displayCount = prices.length;
         const minP = Math.min(...prices);
@@ -223,13 +221,13 @@
           closePrice: prices[prices.length - 1]
         };
       } catch (err) {
-        console.error("Error fetching terrain data:", err);
-        info.textContent = "Error fetching terrain data.";
+        console.error("Error fetching static stock data:", err);
+        info.textContent = "Error fetching stock chart data.";
         return { points: [], minP: 0, maxP: 0, dates: [], closePrice: 0 };
       }
     }
     
-    // --- Game Variables & Setup ---
+    // --- Game Variables & Setup (unchanged) ---
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
     const overlayCanvas = document.getElementById("chartOverlay");
@@ -438,6 +436,7 @@
         const p2 = terrainPoints[i + 1];
         if (lander.x >= p1.x && lander.x <= p2.x) {
           const terrainY = p1.y + ((p2.y - p1.y) * (lander.x - p1.x)) / (p2.x - p1.x);
+          // landingPrice is interpolated from the terrain points:
           const terrainPrice = p1.price + ((p2.price - p1.price) * (lander.x - p1.x)) / (p2.x - p1.x);
           if (lander.y >= terrainY) {
             const vspeed = Math.abs(lander.vy);
@@ -445,10 +444,10 @@
             const angleDiff = Math.abs(lander.angle % 360);
             if (vspeed < 0.5 && hspeed < 0.5 && angleDiff < 15) {
               lander.isLanded = true;
-              // New score calculation: (closePrice - landingPrice) * fuel left
-              lander.score = Math.round((result.closePrice - terrainPrice) * lander.fuel);
+              // New score calculation: (closePrice - landingPrice) x fuel left
+              lander.score = Math.round((closePrice - terrainPrice) * lander.fuel);
               const phrase = memePhrases[Math.floor(Math.random() * memePhrases.length)];
-              info.textContent = `${phrase} Landed on $${terrainPrice.toFixed(2)} (Close: $${result.closePrice.toFixed(2)})! Score: $${lander.score}`;
+              info.textContent = `${phrase} Landed on $${terrainPrice.toFixed(2)} (Close: $${closePrice.toFixed(2)})! Score: $${lander.score}`;
               landingSound.play();
               saveLeaderboard(playerName, stockSymbol, lander.score);
               endGame();
@@ -562,6 +561,8 @@
       initStars();
       result = await fetchTerrainDataStatic(stockSymbol);
       terrainPoints = result.points;
+      // Save the close price for score calculation
+      closePrice = result.closePrice;
       if (!terrainPoints.length) {
         info.textContent = "No terrain generated. Game cannot start.";
         return;
