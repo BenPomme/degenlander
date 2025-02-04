@@ -1,6 +1,7 @@
 import requests
 import json
 import time
+import os
 
 API_KEY = "KGONF7JN3HYIGUWO"
 
@@ -29,6 +30,37 @@ stocks = [
 
 main_stock_list = []
 
+def compute_terrain(stock_data, canvas_width=800, canvas_height=600):
+    """
+    Given a list of dictionaries with key "4. close" (as strings),
+    compute terrain data matching the format expected by the game.
+    Returns a dictionary with keys: points, minP, maxP, dates, closePrice.
+    """
+    # Extract closing prices from the provided list
+    prices = [float(item["4. close"]) for item in stock_data if "4. close" in item]
+    if not prices:
+        return None
+    display_count = len(prices)
+    min_price = min(prices)
+    max_price = max(prices)
+    price_range = max_price - min_price
+    # Compute horizontal step size
+    step = canvas_width / (display_count - 1)
+    points = []
+    for i, price in enumerate(prices):
+        x = i * step
+        normalized = (price - min_price) / (price_range or 1)
+        y = canvas_height - normalized * (canvas_height * 0.5)
+        points.append({"x": x, "y": y, "price": price})
+    terrain = {
+        "points": points,
+        "minP": min_price,
+        "maxP": max_price,
+        "dates": [f"Day {i+1}" for i in range(display_count)],
+        "closePrice": prices[-1]
+    }
+    return terrain
+
 for stock in stocks:
     ticker = stock["ticker"]
     url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&apikey={API_KEY}"
@@ -45,11 +77,11 @@ for stock in stocks:
         continue
 
     time_series = data["Time Series (Daily)"]
-    dates = sorted(time_series.keys(), reverse=True)
+    dates = sorted(time_series.keys())  # Sorted in ascending order
     if not dates:
         print(f"No dates found for {ticker}.")
         continue
-    latest_date = dates[0]
+    latest_date = dates[-1]
     try:
         last_close = float(time_series[latest_date]["4. close"])
     except Exception as e:
@@ -62,23 +94,30 @@ for stock in stocks:
         "price": last_close
     })
 
-    # For terrain data, get the 30 oldest dates from the last 30 available days (sorted ascending)
-    last_30_dates = sorted(dates[-30:])
-    terrain_data = []
+    # For terrain data: use the last 30 days (or all available if fewer)
+    last_30_dates = dates[-30:]
+    # Build a list of dictionaries containing the "4. close" for each date
+    terrain_raw = []
     for d in last_30_dates:
         try:
             close_value = time_series[d]["4. close"]
-            terrain_data.append({"4. close": close_value})
+            terrain_raw.append({"4. close": close_value})
         except Exception as e:
             print(f"Error parsing data for date {d} of {ticker}: {e}")
-    filename = f"stock_{ticker}.json"
-    try:
-        with open(filename, "w") as f:
-            json.dump(terrain_data, f, indent=4)
-        print(f"Saved terrain data for {ticker} to {filename}")
-    except Exception as e:
-        print(f"Error writing file {filename}: {e}")
 
+    terrain = compute_terrain(terrain_raw)
+    if terrain is None:
+        print(f"Could not compute terrain for {ticker} (no valid prices)")
+    else:
+        terrain_filename = f"terrain_{ticker}.json"
+        try:
+            with open(terrain_filename, "w") as f:
+                json.dump(terrain, f, indent=4)
+            print(f"Saved terrain data for {ticker} to {terrain_filename}")
+        except Exception as e:
+            print(f"Error writing file {terrain_filename}: {e}")
+
+    # Sleep to respect API rate limits
     time.sleep(15)
 
 try:

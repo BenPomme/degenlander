@@ -11,6 +11,7 @@
     body { 
       margin: 0;
       padding: 0;
+      /* Neon-inspired gradient with flicker animation */
       background: linear-gradient(45deg, #141414, #222);
       animation: neonFlicker 5s infinite;
       color: #fff;
@@ -168,7 +169,7 @@
     window.saveLeaderboard = saveLeaderboard;
   </script>
   
-  <!-- Game Logic Script with Debug Logging and Updated Proxy -->
+  <!-- Game Logic Script with Debug Logging and CORS Proxy using https://corsproxy.io/ -->
   <script>
     // Debug: Log current page URL
     console.log("Current page URL:", window.location.href);
@@ -192,10 +193,10 @@
     // Default to AAPL if no stock symbol is provided
     const stockSymbol = queryParams.stockSymbol || "AAPL";
     
-    // Use a CORS proxy from ThingProxy to overcome CORS issues.
+    // Use corsproxy.io to bypass CORS restrictions.
     async function fetchTerrainDataStatic(stockSymbol) {
       const baseUrl = `https://benpomme.github.io/degenlander/stock_${stockSymbol}.json`;
-      const proxyUrl = `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(baseUrl)}`;
+      const proxyUrl = `https://corsproxy.io/?${baseUrl}`;
       console.log("Fetching terrain data via proxy from:", proxyUrl);
       try {
         const response = await fetch(proxyUrl);
