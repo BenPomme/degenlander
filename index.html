@@ -27,7 +27,7 @@
   </div>
 
   <script>
-    // Embedded stock data: populate the dropdown.
+    // Populate dropdown from embedded stock data.
     const stocks = [
       {"ticker": "AAPL", "name": "Apple Inc."},
       {"ticker": "MSFT", "name": "Microsoft Corporation"},
@@ -60,7 +60,7 @@
       });
     });
 
-    // On form submission, pass parameters to game.html.
+    // When the form is submitted, redirect to game.html with query parameters.
     document.getElementById("startGameForm").addEventListener("submit", function(e) {
       e.preventDefault();
       const playerName = document.getElementById("playerName").value;
@@ -73,6 +73,13 @@
   </script>
 
   <!-- Tipping Widget: Buy Me A Coffee -->
-  <script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" data-id="degenben" data-description="Support me on Buy me a coffee!" data-message="Golden hands, tip me so that I can put a bitcoin in Uranus." data-color="#FF5F5F" data-position="Right" data-x_margin="18" data-y_margin="18"></script>
+  <script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" 
+          data-id="degenben" 
+          data-description="Support me on Buy me a coffee!" 
+          data-message="Golden hands, tip me so that I can put a bitcoin in Uranus." 
+          data-color="#FF5F5F" 
+          data-position="Right" 
+          data-x_margin="18" 
+          data-y_margin="18"></script>
 </body>
 </html>

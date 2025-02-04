@@ -115,6 +115,30 @@
       display: none;
       z-index: 1000;
     }
+    /* Mobile Touch Controls */
+    #touchControls {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 20px;
+    }
+    #touchControls button {
+      padding: 15px 20px;
+      font-size: 18px;
+      border: 2px solid #FF5F5F;
+      border-radius: 6px;
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      font-family: 'Press Start 2P', cursive;
+    }
+    /* Hide touch controls on larger screens */
+    @media (min-width: 768px) {
+      #touchControls {
+        display: none;
+      }
+    }
   </style>
 </head>
 <body>
@@ -128,6 +152,12 @@
     <div id="controlButtons">
       <button id="playAgainButton">Restart</button>
       <button id="backButton">Back to Menu</button>
+    </div>
+    <!-- Mobile Touch Controls -->
+    <div id="touchControls">
+      <button id="touchLeft">Left</button>
+      <button id="touchThrust">Thrust</button>
+      <button id="touchRight">Right</button>
     </div>
   </div>
   
@@ -188,13 +218,11 @@
     }
     const queryParams = getQueryParams();
     const playerName = queryParams.playerName || "Anonymous";
-    // Default to AAPL if no stock symbol is provided
     const stockSymbol = queryParams.stockSymbol || "AAPL";
     
     // Use corsproxy.io with your API key to bypass CORS
     async function fetchTerrainDataStatic(stockSymbol) {
       const baseUrl = `https://benpomme.github.io/degenlander/stock_${stockSymbol}.json`;
-      // Construct the proxy URL using your API key.
       const proxyUrl = `https://corsproxy.io/?key=dcf28481&url=${encodeURIComponent(baseUrl)}`;
       console.log("Fetching terrain data via proxy from:", proxyUrl);
       try {
@@ -321,8 +349,8 @@
       overlayCtx.fillStyle = "#ccc";
       overlayCtx.font = "12px monospace";
       overlayCtx.textAlign = "right";
-      overlayCtx.fillText(`Max: ${fetchedMaxPrice.toFixed(2)}`, 45, 20);
-      overlayCtx.fillText(`Min: ${fetchedMinPrice.toFixed(2)}`, 45, overlayCanvas.height - 55);
+      overlayCtx.fillText(`Max: ${fetchedMinPrice.toFixed(2)}`, 45, 20);
+      overlayCtx.fillText(`Min: ${fetchedMaxPrice.toFixed(2)}`, 45, overlayCanvas.height - 55);
       overlayCtx.textAlign = "center";
       const tickCount = 4;
       const step = Math.floor(relevantDates.length / tickCount);
@@ -556,6 +584,41 @@
       initStars();
       initGame();
     });
+    
+    // Mobile Touch Controls
+    function setupTouchControls() {
+      const touchLeft = document.getElementById("touchLeft");
+      const touchThrust = document.getElementById("touchThrust");
+      const touchRight = document.getElementById("touchRight");
+
+      touchLeft.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        keysPressed["ArrowLeft"] = true;
+      });
+      touchLeft.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        keysPressed["ArrowLeft"] = false;
+      });
+
+      touchRight.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        keysPressed["ArrowRight"] = true;
+      });
+      touchRight.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        keysPressed["ArrowRight"] = false;
+      });
+
+      touchThrust.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        keysPressed["ArrowUp"] = true;
+      });
+      touchThrust.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        keysPressed["ArrowUp"] = false;
+      });
+    }
+    setupTouchControls();
     
     let result; // Global variable for fetched terrain data
     async function initGame() {
