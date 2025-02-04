@@ -2,10 +2,8 @@ import requests
 import json
 import time
 
-# Your Alpha Vantage API key
 API_KEY = "KGONF7JN3HYIGUWO"
 
-# List of stocks with their tickers and names
 stocks = [
     {"ticker": "AAPL", "name": "Apple Inc."},
     {"ticker": "MSFT", "name": "Microsoft Corporation"},
@@ -29,7 +27,6 @@ stocks = [
     {"ticker": "UNH", "name": "UnitedHealth Group"}
 ]
 
-# List to store the main stock list info (ticker, name, last close price)
 main_stock_list = []
 
 for stock in stocks:
@@ -43,13 +40,11 @@ for stock in stocks:
         print(f"Error fetching data for {ticker}: {e}")
         continue
 
-    # Check if the API returned valid data
     if "Time Series (Daily)" not in data:
         print(f"Error: No time series data for {ticker}. Response: {data}")
         continue
 
     time_series = data["Time Series (Daily)"]
-    # Get the dates and sort them descending so that the latest is first
     dates = sorted(time_series.keys(), reverse=True)
     if not dates:
         print(f"No dates found for {ticker}.")
@@ -61,14 +56,13 @@ for stock in stocks:
         print(f"Error parsing closing price for {ticker}: {e}")
         continue
 
-    # Append to the main stock list
     main_stock_list.append({
         "ticker": ticker,
         "name": stock["name"],
         "price": last_close
     })
 
-    # For terrain data, we want the last 30 days (sorted in ascending order)
+    # For terrain data, get the 30 oldest dates from the last 30 available days (sorted ascending)
     last_30_dates = sorted(dates[-30:])
     terrain_data = []
     for d in last_30_dates:
@@ -77,7 +71,6 @@ for stock in stocks:
             terrain_data.append({"4. close": close_value})
         except Exception as e:
             print(f"Error parsing data for date {d} of {ticker}: {e}")
-    # Save the terrain data to a file named "stock_[TICKER].json"
     filename = f"stock_{ticker}.json"
     try:
         with open(filename, "w") as f:
@@ -86,10 +79,8 @@ for stock in stocks:
     except Exception as e:
         print(f"Error writing file {filename}: {e}")
 
-    # Sleep for 15 seconds to avoid hitting the API rate limit
     time.sleep(15)
 
-# Save the main stock list to "stocks.json"
 try:
     with open("stocks.json", "w") as f:
         json.dump(main_stock_list, f, indent=4)
