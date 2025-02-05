@@ -5,10 +5,28 @@
   <title>DEGEN LANDER - Home</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { background: #222; color: #fff; font-family: sans-serif; text-align: center; }
+    body { 
+      background: #222; 
+      color: #fff; 
+      font-family: sans-serif; 
+      text-align: center; 
+      margin: 0;
+      padding: 20px;
+    }
     .banner { max-width: 100%; height: auto; }
     .menu { margin-top: 20px; }
     input, select, button { padding: 10px; margin: 5px; font-size: 16px; }
+    /* Style for the music toggle button */
+    #toggleMusic {
+      background: #FF5F5F;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 10px 20px;
+      margin-top: 15px;
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
@@ -24,10 +42,14 @@
       <button type="submit">Start Game</button>
     </form>
     <button id="viewLeaderboard">View Leaderboard</button>
+    
+    <!-- Music player: STI.mp3 plays in loop -->
+    <audio id="bgMusic" src="STI.mp3" loop autoplay></audio>
+    <button id="toggleMusic">Turn Off Music</button>
   </div>
 
   <script>
-    // Populate dropdown from embedded stock data.
+    // Embedded stock data to populate the dropdown.
     const stocks = [
       {"ticker": "AAPL", "name": "Apple Inc."},
       {"ticker": "MSFT", "name": "Microsoft Corporation"},
@@ -69,6 +91,19 @@
     });
     document.getElementById("viewLeaderboard").addEventListener("click", function() {
       window.location.href = "leaderboard.html";
+    });
+
+    // Music toggle button functionality
+    const bgMusic = document.getElementById("bgMusic");
+    const toggleMusicButton = document.getElementById("toggleMusic");
+    toggleMusicButton.addEventListener("click", function(){
+      if(bgMusic.paused) {
+        bgMusic.play();
+        toggleMusicButton.textContent = "Turn Off Music";
+      } else {
+        bgMusic.pause();
+        toggleMusicButton.textContent = "Turn On Music";
+      }
     });
   </script>
 
