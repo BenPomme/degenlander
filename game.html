@@ -7,7 +7,7 @@
   <!-- Import retro font for degen aesthetics -->
   <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
   <style>
-    /* New degen graphical improvements */
+    /* Retro/neon degen aesthetic */
     body { 
       margin: 0;
       padding: 0;
@@ -91,7 +91,7 @@
       0% { opacity: 1; }
       100% { opacity: 0; }
     }
-    /* Redesigned buttons with neon borders */
+    /* Buttons with neon borders */
     button {
       padding: 8px 16px;
       background: transparent;
@@ -133,11 +133,32 @@
       color: #fff;
       font-family: 'Press Start 2P', cursive;
     }
-    /* Hide touch controls on larger screens */
     @media (min-width: 768px) {
-      #touchControls {
-        display: none;
-      }
+      #touchControls { display: none; }
+    }
+    /* End Level Options Overlay */
+    #endLevelOverlay, #storeOverlay {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      z-index: 2000;
+      color: #fff;
+      font-family: 'Press Start 2P', cursive;
+      text-align: center;
+      padding-top: 100px;
+    }
+    #endLevelOverlay p, #storeOverlay p {
+      margin: 20px;
+      font-size: 24px;
+    }
+    #endLevelOverlay button, #storeOverlay button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 18px;
     }
   </style>
 </head>
@@ -159,13 +180,25 @@
       <button id="touchThrust">Thrust</button>
       <button id="touchRight">Right</button>
     </div>
+    <!-- End Level Options Overlay -->
+    <div id="endLevelOverlay">
+      <p id="endLevelMessage">Successful landing! Your score: $0</p>
+      <button id="cashOutButton">Cash Out</button>
+      <button id="doubleDownButton">Double Down (LEVERAGE)</button>
+      <button id="storeButton">Visit Store</button>
+    </div>
+    <!-- Store Overlay -->
+    <div id="storeOverlay">
+      <p id="storeMessage">Store: Upgrade Fuel Capacity (+20)</p>
+      <button id="buyUpgradeButton">Buy Upgrade</button>
+      <button id="closeStoreButton">Close Store</button>
+    </div>
   </div>
   
-  <!-- Firebase Integration Module (unchanged) -->
+  <!-- Firebase Integration Module -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
     import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
-
     const firebaseConfig = {
       apiKey: "AIzaSyCol18DWGnK9NgxDK2h7YwTOGGegNSlJGM",
       authDomain: "degenlander.firebaseapp.com",
@@ -175,10 +208,8 @@
       appId: "1:520104814068:web:07e9042a7077c603fa05a1",
       measurementId: "G-38X89CMKNS"
     };
-
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-
     async function saveLeaderboard(name, stock, score) {
       try {
         await addDoc(collection(db, "leaderboard"), {
@@ -198,15 +229,46 @@
     window.saveLeaderboard = saveLeaderboard;
   </script>
   
-  <!-- Game Logic Script with Debug Logging and updated proxy using corsproxy.io with API key -->
+  <!-- Game Logic Script -->
   <script>
     console.log("Current page URL:", window.location.href);
-    if(window.location.protocol === "file:") {
+    if (window.location.protocol === "file:") {
       document.getElementById("info").textContent = "WARNING: Please run via a web server (e.g., Live Server) instead of opening the file directly.";
     }
-
+    
+    // Global settings for dynamic difficulty and store upgrades
+    const baseGravity = 0.003;
+    const baseThrust = 0.04;
+    const rotationSpeed = 3;
+    let fuelCapacity = 100;       // initial fuel capacity (upgradable)
+    let leverageMultiplier = 1;   // cumulative multiplier from double downs
+    
+    // Parallax Background Elements
+    let parallaxElements = [];
+    function initParallax() {
+      parallaxElements = [];
+      for (let i = 0; i < 5; i++) {
+        parallaxElements.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          radius: 20 + Math.random() * 40,
+          speed: 0.2 + Math.random() * 0.3,
+          alpha: 0.1 + Math.random() * 0.2
+        });
+      }
+    }
+    function drawParallax() {
+      parallaxElements.forEach(elem => {
+        let parallaxX = (elem.x - lander.vx * elem.speed) % canvas.width;
+        let parallaxY = (elem.y - lander.vy * elem.speed) % canvas.height;
+        ctx.fillStyle = `rgba(100,100,100,${elem.alpha})`;
+        ctx.beginPath();
+        ctx.arc(parallaxX, parallaxY, elem.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+    
     let closePrice = 0;
-
     function getQueryParams() {
       const params = {};
       const queryString = window.location.search.substring(1);
@@ -220,7 +282,7 @@
     const playerName = queryParams.playerName || "Anonymous";
     const stockSymbol = queryParams.stockSymbol || "AAPL";
     
-    // Use corsproxy.io with your API key to bypass CORS
+    // Fetch terrain data via corsproxy.io with API key
     async function fetchTerrainDataStatic(stockSymbol) {
       const baseUrl = `https://benpomme.github.io/degenlander/stock_${stockSymbol}.json`;
       const proxyUrl = `https://corsproxy.io/?key=dcf28481&url=${encodeURIComponent(baseUrl)}`;
@@ -276,9 +338,10 @@
     let terrainPoints = [];
     let fetchedMinPrice = 0, fetchedMaxPrice = 0, relevantDates = [];
     let stars = [], particles = [], powerUp = null;
-    const gravity = 0.003, thrustPower = 0.04, rotationSpeed = 3;
     let keysPressed = {}, animationFrameId;
-    let lander = { x: 400, y: 50, vx: 0, vy: 0, angle: 0, fuel: 100, isCrashed: false, isLanded: false, score: 0 };
+    // Initialize lander with current fuelCapacity and carry over score
+    let lander = { x: 400, y: 50, vx: 0, vy: 0, angle: 0, fuel: fuelCapacity, isCrashed: false, isLanded: false, score: 0 };
+    
     const memePhrases = [
       "TO THE MOON, APES!", "GME YOLO DIAMOND HANDS!", "WE LIKE THE STOCK!",
       "STONKS ONLY GO UP!", "DIAMOND HANDS FOREVER!", "SEND IT TO VALHALLA!",
@@ -319,6 +382,16 @@
         ctx.fill();
       }
     }
+    function drawParallax() {
+      parallaxElements.forEach(elem => {
+        let parallaxX = (elem.x - lander.vx * elem.speed) % canvas.width;
+        let parallaxY = (elem.y - lander.vy * elem.speed) % canvas.height;
+        ctx.fillStyle = `rgba(100,100,100,${elem.alpha})`;
+        ctx.beginPath();
+        ctx.arc(parallaxX, parallaxY, elem.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
     function drawTerrain() {
       if (!terrainPoints.length) return;
       ctx.beginPath();
@@ -349,7 +422,7 @@
       overlayCtx.fillStyle = "#ccc";
       overlayCtx.font = "12px monospace";
       overlayCtx.textAlign = "right";
-      overlayCtx.fillText(`Max: ${fetchedMinPrice.toFixed(2)}`, 45, 20);
+      overlayCtx.fillText(`Max: ${fetchedMaxPrice.toFixed(2)}`, 45, 20);
       overlayCtx.fillText(`Min: ${fetchedMaxPrice.toFixed(2)}`, 45, overlayCanvas.height - 55);
       overlayCtx.textAlign = "center";
       const tickCount = 4;
@@ -387,7 +460,7 @@
       ctx.lineTo(10, 10);
       ctx.lineTo(0, -10);
       ctx.closePath();
-      ctx.fillStyle = "#ff0";
+      ctx.fillStyle = "#ff0"; // Default yellow
       ctx.fill();
       if (keysPressed["ArrowUp"] && lander.fuel > 0 && !lander.isCrashed && !lander.isLanded) {
         ctx.beginPath();
@@ -407,7 +480,8 @@
         p.y += p.vy;
         p.life -= 1;
         p.alpha = p.life / 30;
-        ctx.fillStyle = `rgba(255,165,0,${p.alpha})`;
+        let hue = 30 + Math.floor(Math.random() * 20);
+        ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${p.alpha})`;
         ctx.beginPath();
         ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
         ctx.fill();
@@ -419,6 +493,7 @@
     }
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawParallax();
       drawStars();
       drawTerrain();
       drawPowerUp();
@@ -432,8 +507,10 @@
       if (keysPressed["ArrowRight"]) { lander.angle += rotationSpeed; }
       if (keysPressed["ArrowUp"] && lander.fuel > 0) {
         const rad = (lander.angle * Math.PI) / 180;
-        const ax = Math.sin(rad) * thrustPower;
-        const ay = -Math.cos(rad) * thrustPower;
+        // Dynamic difficulty scaling: thrust decreases as score increases
+        const dynamicThrust = baseThrust * (1 - Math.min(lander.score / 10000, 0.5));
+        const ax = Math.sin(rad) * dynamicThrust;
+        const ay = -Math.cos(rad) * dynamicThrust;
         lander.vx += ax;
         lander.vy += ay;
         lander.fuel = Math.max(lander.fuel - 0.1, 0);
@@ -451,7 +528,8 @@
           showComicBubble(memePhrases[Math.floor(Math.random() * memePhrases.length)], lander.x + 50, lander.y);
         }
       }
-      lander.vy += gravity;
+      let dynamicGravity = baseGravity * (1 + lander.score / 1000);
+      lander.vy += dynamicGravity;
       lander.x += lander.vx;
       lander.y += lander.vy;
       if (lander.x < 0) { lander.x = 0; lander.vx = 0; }
@@ -477,12 +555,12 @@
             const angleDiff = Math.abs(lander.angle % 360);
             if (vspeed < 0.5 && hspeed < 0.5 && angleDiff < 15) {
               lander.isLanded = true;
-              lander.score = Math.round((closePrice - terrainPrice) * lander.fuel);
+              // Apply leverage multiplier to score
+              lander.score = Math.round((closePrice - terrainPrice) * lander.fuel * leverageMultiplier);
               const phrase = memePhrases[Math.floor(Math.random() * memePhrases.length)];
               info.textContent = `${phrase} Landed on $${terrainPrice.toFixed(2)} (Close: $${closePrice.toFixed(2)})! Score: $${lander.score}`;
               landingSound.play();
-              saveLeaderboard(playerName, stockSymbol, lander.score);
-              endGame();
+              showEndLevelOverlay();
               break;
             } else {
               lander.isCrashed = true;
@@ -498,7 +576,7 @@
         const dx = lander.x - powerUp.x, dy = lander.y - powerUp.y;
         if (Math.sqrt(dx * dx + dy * dy) < 15) {
           powerUp.collected = true;
-          lander.fuel = Math.min(lander.fuel + 20, 100);
+          lander.fuel = Math.min(lander.fuel + 20, fuelCapacity);
           info.textContent = "Power-up collected! Extra fuel!";
         }
       }
@@ -532,11 +610,9 @@
       document.body.appendChild(img);
       setTimeout(() => { img.remove(); }, 2500);
     }
-    // --- Sound Effects ---
     const thrustSound = new Audio("https://www.soundjay.com/mechanical/sounds/rocket-launch-1.mp3");
     const landingSound = new Audio("https://www.soundjay.com/misc/sounds/success-fanfare-trumpets-01.mp3");
     const crashSound = new Audio("https://www.soundjay.com/misc/sounds/failure-sound-01.mp3");
-    // --- Responsive Canvas ---
     function resizeCanvas() {
       canvas.width = window.innerWidth * 0.8;
       canvas.height = window.innerHeight * 0.8;
@@ -545,80 +621,133 @@
       drawChartAxes();
     }
     window.addEventListener("resize", resizeCanvas);
+    function drawChartAxes() {
+      overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+      if (!terrainPoints.length) return;
+      overlayCtx.strokeStyle = "#888";
+      overlayCtx.lineWidth = 1;
+      overlayCtx.beginPath();
+      overlayCtx.moveTo(50, 0);
+      overlayCtx.lineTo(50, overlayCanvas.height);
+      overlayCtx.moveTo(0, overlayCanvas.height - 50);
+      overlayCtx.lineTo(overlayCanvas.width, overlayCanvas.height - 50);
+      overlayCtx.stroke();
+      overlayCtx.fillStyle = "#ccc";
+      overlayCtx.font = "12px monospace";
+      overlayCtx.textAlign = "right";
+      overlayCtx.fillText(`Max: ${fetchedMaxPrice.toFixed(2)}`, 45, 20);
+      overlayCtx.fillText(`Min: ${fetchedMaxPrice.toFixed(2)}`, 45, overlayCanvas.height - 55);
+      overlayCtx.textAlign = "center";
+      const tickCount = 4;
+      const step = Math.floor(relevantDates.length / tickCount);
+      for (let i = 0; i < relevantDates.length; i += step) {
+        const label = relevantDates[i];
+        const dateX = terrainPoints[i].x;
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(dateX + 50, overlayCanvas.height - 50);
+        overlayCtx.lineTo(dateX + 50, overlayCanvas.height - 45);
+        overlayCtx.stroke();
+        overlayCtx.save();
+        overlayCtx.translate(dateX + 50, overlayCanvas.height - 40);
+        overlayCtx.rotate(-Math.PI / 4);
+        overlayCtx.fillText(label, 0, 0);
+        overlayCtx.restore();
+      }
+    }
     
-    function endGame() {
+    // End Level Options Overlay functions
+    function showEndLevelOverlay() {
       cancelAnimationFrame(animationFrameId);
-      controlButtons.style.display = "block";
-      scoreOverlay.style.display = "block";
-      scoreOverlay.textContent = `Score: $${lander.score}`;
+      document.getElementById("endLevelMessage").textContent = `Successful landing! Your score: $${lander.score}`;
+      document.getElementById("endLevelOverlay").style.display = "block";
+    }
+    function hideEndLevelOverlay() {
+      document.getElementById("endLevelOverlay").style.display = "none";
     }
     
-    function handleKeyDown(e) {
-      if (e.key === "ArrowUp" && !keysPressed["ArrowUp"]) {
-        thrustSound.loop = true;
-        thrustSound.play();
-      }
-      keysPressed[e.key] = true;
+    // Store Overlay functions
+    function showStoreOverlay() {
+      document.getElementById("storeOverlay").style.display = "block";
     }
-    function handleKeyUp(e) {
-      keysPressed[e.key] = false;
-      if (e.key === "ArrowUp") {
-        thrustSound.pause();
-        thrustSound.currentTime = 0;
-      }
+    function hideStoreOverlay() {
+      document.getElementById("storeOverlay").style.display = "none";
     }
-    document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("keyup", handleKeyUp);
     
-    backButton.addEventListener("click", () => {
+    // End-Level Overlay Button Events
+    document.getElementById("cashOutButton").addEventListener("click", () => {
+      // Redirect to home page
       window.location.href = "index.html";
     });
-    playAgainButton.addEventListener("click", () => {
-      scoreOverlay.style.display = "none";
-      controlButtons.style.display = "none";
-      info.textContent = "";
-      lander = { x: 400, y: 50, vx: 0, vy: 0, angle: 0, fuel: 100, isCrashed: false, isLanded: false, score: 0 };
-      keysPressed = {};
-      particles = [];
-      powerUp = null;
-      initStars();
-      initGame();
+    document.getElementById("doubleDownButton").addEventListener("click", () => {
+      let multiplier = (Math.random() * 1.5 + 1.5).toFixed(2); // between 1.5 and 3.0
+      multiplier = parseFloat(multiplier);
+      leverageMultiplier *= multiplier;
+      alert(`Double Down activated! LEVERAGE multiplier x${multiplier} applied. Total multiplier: x${leverageMultiplier.toFixed(2)}`);
+      hideEndLevelOverlay();
+      restartLevel();
+    });
+    document.getElementById("storeButton").addEventListener("click", () => {
+      hideEndLevelOverlay();
+      showStoreOverlay();
     });
     
-    // Mobile Touch Controls
+    // Store Overlay Button Events
+    document.getElementById("buyUpgradeButton").addEventListener("click", () => {
+      fuelCapacity += 20;
+      alert(`Fuel capacity upgraded! New capacity: ${fuelCapacity}`);
+    });
+    document.getElementById("closeStoreButton").addEventListener("click", () => {
+      hideStoreOverlay();
+      restartLevel();
+    });
+    
+    // Restart level: resets lander state while preserving upgrades and multipliers
+    function restartLevel() {
+      lander = { x: 400, y: 50, vx: 0, vy: 0, angle: 0, fuel: fuelCapacity, isCrashed: false, isLanded: false, score: lander.score };
+      initStars();
+      initParallax();
+      hideEndLevelOverlay();
+      gameLoop();
+    }
+    
+    // Mobile Touch Controls using pointer events for better compatibility
     function setupTouchControls() {
       const touchLeft = document.getElementById("touchLeft");
       const touchThrust = document.getElementById("touchThrust");
       const touchRight = document.getElementById("touchRight");
 
-      touchLeft.addEventListener("touchstart", (e) => {
+      touchLeft.addEventListener("pointerdown", (e) => {
         e.preventDefault();
         keysPressed["ArrowLeft"] = true;
       });
-      touchLeft.addEventListener("touchend", (e) => {
+      touchLeft.addEventListener("pointerup", (e) => {
         e.preventDefault();
         keysPressed["ArrowLeft"] = false;
       });
-
-      touchRight.addEventListener("touchstart", (e) => {
+      touchRight.addEventListener("pointerdown", (e) => {
         e.preventDefault();
         keysPressed["ArrowRight"] = true;
       });
-      touchRight.addEventListener("touchend", (e) => {
+      touchRight.addEventListener("pointerup", (e) => {
         e.preventDefault();
         keysPressed["ArrowRight"] = false;
       });
-
-      touchThrust.addEventListener("touchstart", (e) => {
+      touchThrust.addEventListener("pointerdown", (e) => {
         e.preventDefault();
         keysPressed["ArrowUp"] = true;
+        thrustSound.loop = true;
+        thrustSound.play();
       });
-      touchThrust.addEventListener("touchend", (e) => {
+      touchThrust.addEventListener("pointerup", (e) => {
         e.preventDefault();
         keysPressed["ArrowUp"] = false;
+        thrustSound.pause();
+        thrustSound.currentTime = 0;
       });
     }
     setupTouchControls();
+    
+    initParallax();
     
     let result; // Global variable for fetched terrain data
     async function initGame() {
@@ -650,5 +779,20 @@
     }
     window.onload = initGame;
   </script>
+  
+  <!-- End Level Options Overlay -->
+  <div id="endLevelOverlay">
+    <p id="endLevelMessage">Successful landing! Your score: $0</p>
+    <button id="cashOutButton">Cash Out</button>
+    <button id="doubleDownButton">Double Down (LEVERAGE)</button>
+    <button id="storeButton">Visit Store</button>
+  </div>
+  
+  <!-- Store Overlay -->
+  <div id="storeOverlay">
+    <p id="storeMessage">Store: Upgrade Fuel Capacity (+20)</p>
+    <button id="buyUpgradeButton">Buy Upgrade</button>
+    <button id="closeStoreButton">Close Store</button>
+  </div>
 </body>
 </html>
