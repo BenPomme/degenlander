@@ -6,16 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Import retro font for degen aesthetics -->
   <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
+  <!-- Import shared DegenlanderPortal libraries -->
+  <script src="../../js/degen-theme.js"></script>
+  <script src="../../js/sound-effects.js"></script>
   <style>
-    /* Retro/neon degen aesthetic */
+    /* Retro/neon degen aesthetic using theme variables */
     body { 
-      margin: 0;
-      padding: 0;
-      background: linear-gradient(45deg, #141414, #222);
-      animation: neonFlicker 5s infinite;
-      color: #fff;
-      font-family: 'Press Start 2P', cursive;
       text-align: center;
+      animation: neonFlicker 5s infinite;
     }
     @keyframes neonFlicker {
       0%, 100% { filter: brightness(1); }
@@ -33,8 +31,8 @@
       to   { text-shadow: 0 0 20px #00FFFF, 0 0 30px #00FFFF, 0 0 40px #FF00FF, 0 0 50px #FF00FF; }
     }
     canvas { 
-      background: #111;
-      border: 2px solid #ccc;
+      background: var(--bg-color, #111);
+      border: 2px solid var(--border-color, #ccc);
       display: block;
       margin: auto;
       box-shadow: 0 0 20px rgba(0,255,0,0.5);
@@ -51,14 +49,14 @@
       position: absolute;
       top: 10px;
       left: 10px;
-      color: #0f0;
+      color: var(--text-color, #0f0);
       font-family: monospace;
       white-space: pre;
       text-shadow: 1px 1px 2px #000;
     }
     #info {
       margin-top: 10px;
-      color: #0f0;
+      color: var(--text-color, #0f0);
       font-weight: bold;
       text-shadow: 1px 1px 2px #000;
     }
@@ -91,12 +89,12 @@
       0% { opacity: 1; }
       100% { opacity: 0; }
     }
-    /* Buttons with neon borders */
+    /* Buttons with neon borders using theme */
     button {
       padding: 8px 16px;
       background: transparent;
-      border: 2px solid #FF5F5F;
-      color: #fff;
+      border: 2px solid var(--accent-color, #FF5F5F);
+      color: var(--text-color, #fff);
       border-radius: 6px;
       cursor: pointer;
       margin: 10px;
@@ -105,7 +103,7 @@
     }
     button:hover { 
       transform: scale(1.05);
-      box-shadow: 0 0 10px #FF5F5F;
+      box-shadow: 0 0 10px var(--accent-color, #FF5F5F);
     }
     #controlButtons {
       position: absolute;
@@ -123,17 +121,29 @@
       transform: translateX(-50%);
       display: flex;
       gap: 20px;
+      z-index: 1500; /* Ensure controls are above other elements */
     }
     #touchControls button {
-      padding: 15px 20px;
+      padding: 20px 25px; /* Larger touch targets */
       font-size: 18px;
-      border: 2px solid #FF5F5F;
-      border-radius: 6px;
-      background: rgba(0,0,0,0.5);
-      color: #fff;
+      border: 3px solid var(--accent-color, #FF5F5F); /* More visible border */
+      border-radius: 8px;
+      background: rgba(0,0,0,0.7); /* More opaque background */
+      color: var(--text-color, #fff);
       font-family: 'Press Start 2P', cursive;
+      box-shadow: 0 0 15px rgba(255,95,95,0.7); /* Glow effect */
     }
-    @media (min-width: 768px) {
+    #touchControls button:active {
+      transform: scale(0.95); /* Feedback when pressed */
+      background: rgba(255,95,95,0.3);
+    }
+    /* Improved responsiveness */
+    @media (max-width: 768px) {
+      h1 { font-size: 1.5rem; }
+      #gameCanvas, #chartOverlay { max-width: 100%; }
+      #touchControls { display: flex; }
+    }
+    @media (min-width: 769px) {
       #touchControls { display: none; }
     }
     /* End Level Options Overlay */
@@ -146,7 +156,7 @@
       height: 100%;
       background: rgba(0,0,0,0.85);
       z-index: 2000;
-      color: #fff;
+      color: var(--text-color, #fff);
       font-family: 'Press Start 2P', cursive;
       text-align: center;
       padding-top: 100px;
@@ -160,11 +170,91 @@
       padding: 10px 20px;
       font-size: 18px;
     }
+    /* Tutorial Overlay */
+    #tutorialOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      z-index: 3000;
+      color: var(--text-color, #fff);
+      font-family: 'Press Start 2P', cursive;
+      text-align: center;
+      padding-top: 50px;
+      display: none;
+    }
+    #tutorialOverlay h2 {
+      color: var(--accent-color, #FF5F5F);
+      margin-bottom: 30px;
+    }
+    #tutorialOverlay p {
+      margin: 20px auto;
+      max-width: 600px;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    #tutorialOverlay button {
+      margin: 30px 10px;
+      padding: 15px 25px;
+      font-size: 18px;
+    }
+    /* Difficulty selector */
+    .difficulty-selector {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .difficulty-btn {
+      padding: 8px 15px;
+      font-size: 14px;
+      border: 2px solid var(--text-color, #0f0);
+      background: transparent;
+      color: var(--text-color, #0f0);
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Press Start 2P', cursive;
+    }
+    .difficulty-btn.active {
+      background: var(--text-color, #0f0);
+      color: var(--bg-color, #000);
+    }
+    /* Achievement notification */
+    #achievementNotification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0,255,0,0.8);
+      color: #000;
+      padding: 15px 20px;
+      border-radius: 8px;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 14px;
+      z-index: 9999;
+      display: none;
+      animation: slideIn 0.5s, fadeOut 0.5s 2.5s forwards;
+      box-shadow: 0 0 20px rgba(0,255,0,0.6);
+    }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
   </style>
 </head>
 <body>
   <div id="gameContainer">
     <h1>DEGEN LANDER</h1>
+    <div class="difficulty-selector">
+      <button class="difficulty-btn active" data-difficulty="easy">Easy</button>
+      <button class="difficulty-btn" data-difficulty="medium">Medium</button>
+      <button class="difficulty-btn" data-difficulty="hard">Hard</button>
+    </div>
     <div id="info"></div>
     <canvas id="gameCanvas" class="hidden"></canvas>
     <canvas id="chartOverlay" class="hidden"></canvas>
@@ -182,16 +272,37 @@
     </div>
     <!-- End Level Options Overlay -->
     <div id="endLevelOverlay">
-      <p id="endLevelMessage">Successful landing! Your score: $0</p>
-      <button id="cashOutButton">Cash Out</button>
-      <button id="doubleDownButton">Double Down (LEVERAGE)</button>
-      <button id="storeButton">Visit Store</button>
+      <p id="endLevelMessage">Fucking nice landing, retard! Your goddamn score: $0</p>
+      <button id="cashOutButton">Cash Out, Pussy</button>
+      <button id="doubleDownButton">Double Down Like a Degenerate (10X)</button>
+      <button id="storeButton">Buy Some Shit</button>
     </div>
     <!-- Store Overlay -->
     <div id="storeOverlay">
-      <p id="storeMessage">Store: Upgrade Fuel Capacity (+20)</p>
-      <button id="buyUpgradeButton">Buy Upgrade</button>
-      <button id="closeStoreButton">Close Store</button>
+      <p id="storeMessage">Degen Store: Upgrade Your Piece of Shit Rocket (+20 Fuel)</p>
+      <button id="buyUpgradeButton">Buy This Crap</button>
+      <button id="closeStoreButton">Fuck This, I'm Out</button>
+    </div>
+    <!-- Tutorial Overlay -->
+    <div id="tutorialOverlay">
+      <div class="tutorial-content">
+        <h2>DEGEN LANDER INSTRUCTIONS</h2>
+        <p>Welcome to DEGEN LANDER, you degenerate gambler! Your goal is to land your shitty spacecraft on the stock chart without crashing like a fucking idiot.</p>
+        <p>Controls:</p>
+        <ul>
+          <li>↑ - Thrust (burns fuel, you moron)</li>
+          <li>← → - Rotate your piece of shit spacecraft</li>
+          <li>Space - Pause the game if you need to take a piss</li>
+        </ul>
+        <p>Land gently on flat surfaces. If you crash, you lose everything like the paper-handed bitch you are!</p>
+        <p>Collect power-ups for extra fuel and try to land as close to the closing price as possible for maximum tendies!</p>
+        <button id="closeTutorial">LET'S FUCKING GO!</button>
+      </div>
+    </div>
+    
+    <!-- Achievement Notification -->
+    <div id="achievementNotification">
+      Achievement Unlocked: Perfect Landing!
     </div>
   </div>
   
@@ -227,6 +338,128 @@
       localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
     }
     window.saveLeaderboard = saveLeaderboard;
+    
+    // Show tutorial on first visit
+    if (!localStorage.getItem('degenlanderTutorialSeen')) {
+      document.getElementById('tutorialOverlay').style.display = 'block';
+      localStorage.setItem('degenlanderTutorialSeen', 'true');
+    }
+    
+    // Close tutorial button
+    document.getElementById('closeTutorial').addEventListener('click', function() {
+      document.getElementById('tutorialOverlay').style.display = 'none';
+    });
+    
+    // Difficulty selector functionality
+    let gameDifficulty = 'easy';
+    document.querySelectorAll('.difficulty-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        gameDifficulty = this.dataset.difficulty;
+        
+        // Adjust game parameters based on difficulty
+        switch(gameDifficulty) {
+          case 'easy':
+            gravity = 0.05;
+            break;
+          case 'medium':
+            gravity = 0.08;
+            break;
+          case 'hard':
+            gravity = 0.12;
+            break;
+        }
+      });
+    });
+    
+    // Enhanced Achievement system
+    const achievements = {
+      perfectLanding: { name: "Perfect Landing", unlocked: false, description: "Land with minimal velocity and perfect angle" },
+      speedDemon: { name: "Speed Demon", unlocked: false, description: "Successfully land at a speed of 4.5+ m/s" },
+      millionaire: { name: "Millionaire", unlocked: false, description: "Accumulate $1,000,000 in total earnings" },
+      levelUp: { name: "Level Up", unlocked: false, description: "Reach level 2 for the first time" },
+      maxLevel: { name: "Max Level Degen", unlocked: false, description: "Reach the maximum level" },
+      fuelMaster: { name: "Fuel Master", unlocked: false, description: "Land with more than 50% fuel remaining" },
+      rocketeer: { name: "Rocketeer", unlocked: false, description: "Perform 100 thruster boosts in a single run" },
+      wallStreetBets: { name: "Wall Street Bets", unlocked: false, description: "Use Double Down 3 times in a row without crashing" },
+      diamondHands: { name: "Diamond Hands", unlocked: false, description: "Complete all 5 stock landings without cashing out" },
+      paperHands: { name: "Paper Hands", unlocked: false, description: "Cash out with less than $100 in earnings" }
+    };
+    
+    function unlockAchievement(achievementId) {
+      if (!achievements[achievementId].unlocked) {
+        achievements[achievementId].unlocked = true;
+        
+        // Save to localStorage
+        const savedAchievements = JSON.parse(localStorage.getItem('degenlanderAchievements') || '{}');
+        savedAchievements[achievementId] = true;
+        localStorage.setItem('degenlanderAchievements', JSON.stringify(savedAchievements));
+        
+        // Show notification
+        const notification = document.getElementById('achievementNotification');
+        notification.textContent = `Achievement Unlocked: ${achievements[achievementId].name}`;
+        notification.style.display = 'block';
+        
+        // Hide notification after animation completes
+        setTimeout(() => {
+          notification.style.display = 'none';
+        }, 3000);
+      }
+    }
+    
+    // Variables to track achievement progress
+    let thrusterBoostCount = 0;
+    let doubleDownCount = 0;
+    let stockLandingsCompleted = 0;
+    
+    // Check for achievements during gameplay
+    function checkAchievements() {
+      // Perfect landing check
+      if (lander.isLanded && Math.sqrt(lander.vx * lander.vx + lander.vy * lander.vy) < 1 && Math.abs(lander.angle % 360) < 5) {
+        unlockAchievement('perfectLanding');
+      }
+      
+      // Speed demon check
+      if (lander.isLanded && Math.sqrt(lander.vx * lander.vx + lander.vy * lander.vy) > 4.5 && Math.sqrt(lander.vx * lander.vx + lander.vy * lander.vy) < 5) {
+        unlockAchievement('speedDemon');
+      }
+      
+      // Millionaire check
+      if (lander.score >= 1000000) {
+        unlockAchievement('millionaire');
+      }
+      
+      // Max level check
+      if (gameLevel >= 5) {
+        unlockAchievement('maxLevel');
+      }
+      
+      // Fuel master check
+      if (lander.isLanded && lander.fuel > fuelCapacity * 0.5) {
+        unlockAchievement('fuelMaster');
+      }
+      
+      // Rocketeer check (tracked separately when thrusters are used)
+      if (thrusterBoostCount >= 100) {
+        unlockAchievement('rocketeer');
+      }
+      
+      // Wall Street Bets check (tracked when using double down)
+      if (doubleDownCount >= 3) {
+        unlockAchievement('wallStreetBets');
+      }
+      
+      // Diamond Hands check (tracked when completing all landings)
+      if (stockLandingsCompleted >= 5) {
+        unlockAchievement('diamondHands');
+      }
+      
+      // Paper Hands check (when cashing out with low earnings)
+      if (lander.isLanded && lander.score < 100) {
+        unlockAchievement('paperHands');
+      }
+    }
   </script>
   
   <!-- Game Logic Script -->
@@ -245,6 +478,17 @@
     
     // Parallax Background Elements
     let parallaxElements = [];
+    let thrustSoundInstance = null; // Sound instance for thrust sound
+    
+    // Game progress tracking
+    let gameLevel = 1;
+    let playerExperience = 0;
+    let levelRequirements = [0, 1000, 3000, 6000, 10000]; // XP needed for each level
+    
+    // Particle effects system
+    let thrusterParticles = [];
+    const MAX_PARTICLES = 100;
+    
     function initParallax() {
       parallaxElements = [];
       for (let i = 0; i < 5; i++) {
@@ -318,8 +562,41 @@
         };
       } catch (err) {
         console.error("Error fetching static stock data:", err);
-        info.textContent = "Error fetching stock chart data.";
-        return { points: [], minP: 0, maxP: 0, dates: [], closePrice: 0 };
+        info.textContent = "Using fallback terrain data.";
+        
+        // Generate fallback terrain data
+        const fallbackPoints = [];
+        const fallbackPrices = [];
+        const pointCount = 50;
+        const step = canvas.width / (pointCount - 1);
+        
+        // Generate random prices with some variation for terrain
+        let currentPrice = 100 + Math.random() * 100;
+        for (let i = 0; i < pointCount; i++) {
+          // Add some random variation (with a trend)
+          currentPrice += (Math.random() - 0.48) * 5;
+          currentPrice = Math.max(50, Math.min(200, currentPrice));
+          fallbackPrices.push(currentPrice);
+        }
+        
+        const minP = Math.min(...fallbackPrices);
+        const maxP = Math.max(...fallbackPrices);
+        const range = maxP - minP;
+        
+        for (let i = 0; i < pointCount; i++) {
+          let x = i * step;
+          let normalized = (fallbackPrices[i] - minP) / (range || 1);
+          let y = canvas.height - normalized * (canvas.height * 0.5);
+          fallbackPoints.push({ x, y, price: fallbackPrices[i] });
+        }
+        
+        return { 
+          points: fallbackPoints, 
+          minP, 
+          maxP, 
+          dates: Array(pointCount).fill().map((_, i) => "Day " + (i + 1)),
+          closePrice: fallbackPrices[fallbackPrices.length - 1]
+        };
       }
     }
     
@@ -474,6 +751,7 @@
       ctx.restore();
     }
     function drawParticles() {
+      // Explosion particles
       for (let i = particles.length - 1; i >= 0; i--) {
         let p = particles[i];
         p.x += p.vx;
@@ -487,9 +765,77 @@
         ctx.fill();
         if (p.life <= 0) { particles.splice(i, 1); }
       }
+      
+      // Thruster particles
+      for (let i = thrusterParticles.length - 1; i >= 0; i--) {
+        let p = thrusterParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 1;
+        p.size *= 0.95; // Shrink particles over time
+        p.alpha = p.life / p.originalLife;
+        
+        // Render particle based on type
+        if (p.type === 'thrust') {
+          // Thruster gradient (from yellow to red)
+          const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+          gradient.addColorStop(0, `rgba(255, 255, 0, ${p.alpha})`);
+          gradient.addColorStop(1, `rgba(255, 0, 0, ${p.alpha * 0.5})`);
+          ctx.fillStyle = gradient;
+        } else if (p.type === 'sparkle') {
+          // Level up sparkle (cyan/blue)
+          ctx.fillStyle = `rgba(0, 255, 255, ${p.alpha})`;
+        }
+        
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        
+        if (p.life <= 0) {
+          thrusterParticles.splice(i, 1);
+        }
+      }
+    }
+    
+    function createThrusterParticle(x, y, angle, type = 'thrust') {
+      // Manage particle pool size
+      if (thrusterParticles.length > MAX_PARTICLES) {
+        thrusterParticles.shift(); // Remove oldest particle
+      }
+      
+      // Calculate randomized direction
+      const spread = 0.2; // How much the particles can spread
+      const actualAngle = angle + (Math.random() - 0.5) * spread;
+      
+      // Different properties based on particle type
+      let speed, size, life;
+      
+      if (type === 'thrust') {
+        speed = 0.5 + Math.random() * 1;
+        size = 2 + Math.random() * 2;
+        life = 10 + Math.random() * 20;
+      } else if (type === 'sparkle') {
+        speed = 0.2 + Math.random() * 0.8;
+        size = 1 + Math.random() * 3;
+        life = 30 + Math.random() * 40;
+      }
+      
+      // Create particle
+      thrusterParticles.push({
+        x: x,
+        y: y,
+        vx: Math.sin(actualAngle) * speed,
+        vy: -Math.cos(actualAngle) * speed,
+        size: size,
+        life: life,
+        originalLife: life,
+        alpha: 1,
+        type: type
+      });
     }
     function drawHUD() {
-      hud.textContent = `Fuel: ${lander.fuel.toFixed(1)}\nScore: $${lander.score}`;
+      // Enhanced HUD with level information and XP
+      hud.textContent = `Fuel: ${lander.fuel.toFixed(1)}\nScore: $${lander.score}\nLevel: ${gameLevel}\nXP: ${playerExperience}/${levelRequirements[gameLevel] || "MAX"}`;
     }
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -514,9 +860,23 @@
         lander.vx += ax;
         lander.vy += ay;
         lander.fuel = Math.max(lander.fuel - 0.1, 0);
+        
+        // Track thruster usage for achievement
+        thrusterBoostCount++;
+        
+        // Create thruster particles (enhanced visual effect)
+        const thrusterX = lander.x - Math.sin(rad) * 10;
+        const thrusterY = lander.y + Math.cos(rad) * 10;
+        
+        // Create multiple particles per frame for a denser effect
+        for (let i = 0; i < 3; i++) {
+          createThrusterParticle(thrusterX, thrusterY, rad, 'thrust');
+        }
+        
+        // Keep the older explosion-style particles too
         particles.push({
-          x: lander.x - Math.sin(rad) * 10,
-          y: lander.y + Math.cos(rad) * 10,
+          x: thrusterX,
+          y: thrusterY,
           vx: -Math.sin(rad) * (Math.random() * 1 + 0.5),
           vy: Math.cos(rad) * (Math.random() * 1 + 0.5),
           alpha: 1,
@@ -538,8 +898,8 @@
       if (lander.y > canvas.height) {
         lander.y = canvas.height;
         lander.isCrashed = true;
-        info.textContent = `You crashed on ${stockSymbol}!`;
-        crashSound.play();
+        info.textContent = `You crashed on ${stockSymbol} you worthless piece of shit!`;
+        DegenSound.play('game', 'explosion');
         endGame();
         return;
       }
@@ -558,14 +918,14 @@
               // Apply leverage multiplier to score
               lander.score = Math.round((closePrice - terrainPrice) * lander.fuel * leverageMultiplier);
               const phrase = memePhrases[Math.floor(Math.random() * memePhrases.length)];
-              info.textContent = `${phrase} Landed on $${terrainPrice.toFixed(2)} (Close: $${closePrice.toFixed(2)})! Score: $${lander.score}`;
-              landingSound.play();
+              info.textContent = `${phrase} You fucking nailed that landing at $${terrainPrice.toFixed(2)} (Close: $${closePrice.toFixed(2)})! Score: $${lander.score} you diamond-handed bastard!`;
+              DegenSound.play('game', 'levelUp');
               showEndLevelOverlay();
               break;
             } else {
               lander.isCrashed = true;
-              info.textContent = `You crashed on ${stockSymbol}!`;
-              crashSound.play();
+              info.textContent = `You crashed on ${stockSymbol} you worthless piece of shit!`;
+              DegenSound.play('game', 'explosion');
               endGame();
               break;
             }
@@ -578,6 +938,7 @@
           powerUp.collected = true;
           lander.fuel = Math.min(lander.fuel + 20, fuelCapacity);
           info.textContent = "Power-up collected! Extra fuel!";
+          DegenSound.play('game', 'powerUp');
         }
       }
     }
@@ -610,9 +971,8 @@
       document.body.appendChild(img);
       setTimeout(() => { img.remove(); }, 2500);
     }
-    const thrustSound = new Audio("https://www.soundjay.com/mechanical/sounds/rocket-launch-1.mp3");
-    const landingSound = new Audio("https://www.soundjay.com/misc/sounds/success-fanfare-trumpets-01.mp3");
-    const crashSound = new Audio("https://www.soundjay.com/misc/sounds/failure-sound-01.mp3");
+    // Using the shared sound system instead of direct Audio objects
+    // Sound effects will be handled by DegenSound
     function resizeCanvas() {
       canvas.width = window.innerWidth * 0.8;
       canvas.height = window.innerHeight * 0.8;
@@ -655,10 +1015,62 @@
       }
     }
     
+    // Add XP and handle level progression
+    function addExperience(xpAmount) {
+      playerExperience += xpAmount;
+      
+      // Check if player can level up
+      if (levelRequirements[gameLevel + 1] && playerExperience >= levelRequirements[gameLevel + 1]) {
+        levelUp();
+      }
+      
+      // Update HUD
+      drawHUD();
+    }
+    
+    // Level up function with rewards
+    function levelUp() {
+      gameLevel++;
+      
+      // Create level up visual effect - circle of sparkle particles
+      const numSparkles = 40;
+      for (let i = 0; i < numSparkles; i++) {
+        const angle = (i / numSparkles) * Math.PI * 2;
+        const distance = 30;
+        const sparkleX = lander.x + Math.cos(angle) * distance;
+        const sparkleY = lander.y + Math.sin(angle) * distance;
+        createThrusterParticle(sparkleX, sparkleY, angle, 'sparkle');
+      }
+      
+      // Play level up sound
+      DegenSound.play('game', 'levelUp');
+      
+      // Level up rewards
+      fuelCapacity += 25 * gameLevel; // More fuel capacity
+      fuel = fuelCapacity; // Refill fuel
+      
+      // Show level up message
+      showComicBubble(`LEVEL UP! Now Level ${gameLevel}!`, lander.x, lander.y - 50);
+      
+      // Add new achievement for leveling up
+      unlockAchievement('levelUp');
+    }
+    
     // End Level Options Overlay functions
     function showEndLevelOverlay() {
       cancelAnimationFrame(animationFrameId);
-      document.getElementById("endLevelMessage").textContent = `Successful landing! Your score: $${lander.score}`;
+      
+      // Add XP based on score
+      const xpGained = Math.floor(lander.score / 10);
+      addExperience(xpGained);
+      
+      // Track successful landings for Diamond Hands achievement
+      stockLandingsCompleted++;
+      
+      // Check for achievements
+      checkAchievements();
+      
+      document.getElementById("endLevelMessage").textContent = `Successful landing! Your score: $${lander.score} (XP +${xpGained})`;
       document.getElementById("endLevelOverlay").style.display = "block";
     }
     function hideEndLevelOverlay() {
@@ -682,6 +1094,21 @@
       let multiplier = (Math.random() * 1.5 + 1.5).toFixed(2); // between 1.5 and 3.0
       multiplier = parseFloat(multiplier);
       leverageMultiplier *= multiplier;
+      
+      // Track double downs for achievement
+      doubleDownCount++;
+      
+      // Check Wall Street Bets achievement
+      if (doubleDownCount >= 3) {
+        unlockAchievement('wallStreetBets');
+      }
+      
+      // Play sound for double down
+      DegenSound.play('game', 'powerUp');
+      
+      // Show comic bubble with multiplier info
+      showComicBubble(`LEVERAGE x${multiplier.toFixed(2)}! Total: x${leverageMultiplier.toFixed(2)}`, lander.x, lander.y - 50);
+      
       alert(`Double Down activated! LEVERAGE multiplier x${multiplier} applied. Total multiplier: x${leverageMultiplier.toFixed(2)}`);
       hideEndLevelOverlay();
       restartLevel();
@@ -735,17 +1162,46 @@
       touchThrust.addEventListener("pointerdown", (e) => {
         e.preventDefault();
         keysPressed["ArrowUp"] = true;
-        thrustSound.loop = true;
-        thrustSound.play();
+        // Play thrust sound using DegenSound
+        if (thrustSoundInstance) {
+          thrustSoundInstance.stop();
+        }
+        thrustSoundInstance = DegenSound.play('game', 'thrust', { loop: true });
       });
       touchThrust.addEventListener("pointerup", (e) => {
         e.preventDefault();
         keysPressed["ArrowUp"] = false;
-        thrustSound.pause();
-        thrustSound.currentTime = 0;
+        // Stop thrust sound
+        if (thrustSoundInstance) {
+          thrustSoundInstance.stop();
+          thrustSoundInstance = null;
+        }
       });
     }
     setupTouchControls();
+    
+    // Add keyboard event listeners
+    function setupKeyboardControls() {
+      document.addEventListener("keydown", (e) => {
+        keysPressed[e.key] = true;
+        // Start thrust sound when up arrow is pressed
+        if (e.key === "ArrowUp" && !thrustSoundInstance) {
+          thrustSoundInstance = DegenSound.play('game', 'thrust', { loop: true });
+        }
+      });
+      
+      document.addEventListener("keyup", (e) => {
+        keysPressed[e.key] = false;
+        if (e.key === "ArrowUp") {
+          // Stop thrust sound when up arrow is released
+          if (thrustSoundInstance) {
+            thrustSoundInstance.stop();
+            thrustSoundInstance = null;
+          }
+        }
+      });
+    }
+    setupKeyboardControls();
     
     initParallax();
     
@@ -778,21 +1234,50 @@
       gameLoop();
     }
     window.onload = initGame;
+    
+    // Get player name and stock symbol from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const playerName = urlParams.get('playerName') || 'Player';
+    const stockSymbol = urlParams.get('stockSymbol') || 'AAPL';
+    
+    document.getElementById('playerName').innerText = playerName;
+    document.getElementById('stockSymbol').innerText = stockSymbol;
+    
+    // Add Back to Home button
+    const backButton = document.createElement('button');
+    backButton.innerHTML = 'BACK TO FUCKING HOME';
+    backButton.style.position = 'absolute';
+    backButton.style.top = '10px';
+    backButton.style.left = '10px';
+    backButton.style.zIndex = '1000';
+    backButton.style.padding = '10px 20px';
+    backButton.style.backgroundColor = '#0f0';
+    backButton.style.color = '#000';
+    backButton.style.border = 'none';
+    backButton.style.borderRadius = '5px';
+    backButton.style.fontWeight = 'bold';
+    backButton.style.cursor = 'pointer';
+    
+    backButton.addEventListener('click', function() {
+        window.location.href = '../../index.html';
+    });
+    
+    document.body.appendChild(backButton);
   </script>
   
   <!-- End Level Options Overlay -->
   <div id="endLevelOverlay">
-    <p id="endLevelMessage">Successful landing! Your score: $0</p>
-    <button id="cashOutButton">Cash Out</button>
-    <button id="doubleDownButton">Double Down (LEVERAGE)</button>
-    <button id="storeButton">Visit Store</button>
+    <p id="endLevelMessage">Fucking nice landing, retard! Your goddamn score: $0</p>
+    <button id="cashOutButton">Cash Out, Pussy</button>
+    <button id="doubleDownButton">Double Down Like a Degenerate (10X)</button>
+    <button id="storeButton">Buy Some Shit</button>
   </div>
   
   <!-- Store Overlay -->
   <div id="storeOverlay">
-    <p id="storeMessage">Store: Upgrade Fuel Capacity (+20)</p>
-    <button id="buyUpgradeButton">Buy Upgrade</button>
-    <button id="closeStoreButton">Close Store</button>
+    <p id="storeMessage">Degen Store: Upgrade Your Piece of Shit Rocket (+20 Fuel)</p>
+    <button id="buyUpgradeButton">Buy This Crap</button>
+    <button id="closeStoreButton">Fuck This, I'm Out</button>
   </div>
 </body>
 </html>
